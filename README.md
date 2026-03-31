@@ -1,5 +1,7 @@
 # ACC 赛事服务器配置工具 (ACC Server Manager)
 
+![Logo](https://cdn.jsdelivr.net/gh/hwangzhun/ACC-Server-Manager@main/src/assets/logo-horizontal-g.svg)
+
 <div align="center">
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
