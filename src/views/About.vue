@@ -39,7 +39,7 @@
 <script setup lang="ts">
 import { Link } from '@element-plus/icons-vue'
 import { t } from '../i18n'
-import logoHorizontalUrl from '../assets/logo-horizontal.svg?url'
+import logoHorizontalUrl from '../assets/logo-horizontal-white.svg?url'
 
 const appVersion = __APP_VERSION__
 const authorDisplay = __APP_AUTHOR__.trim()
