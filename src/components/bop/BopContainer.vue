@@ -1,77 +1,96 @@
 <template>
   <div class="bop-container">
-    <!-- Header -->
-    <div class="bop-header">
-      <div class="header-title">
-        <h3>{{ t('nav.bop') }}</h3>
-        <span class="entry-count">{{ t('bop.total').replace('{count}', entries.length.toString()) }} {{ t('common.items') }}</span>
-      </div>
-      <div class="header-actions">
-        <el-button
-          type="danger"
-          :icon="Delete"
-          :disabled="selectedRows.length === 0"
-          @click="handleBatchDelete"
-        >
-          {{ t('common.batchDelete') }}{{ selectedRows.length > 0 ? ` (${selectedRows.length})` : '' }}
-        </el-button>
-        <el-button type="success" :icon="Download" @click="showImportDialog = true">
-          {{ t('bop.importFromLfm') }}
-        </el-button>
-        <el-button type="primary" :icon="Plus" @click="handleAddEntry">
-          {{ t('title.addBop') }}
-        </el-button>
-      </div>
-    </div>
+    <Win11Card>
+      <template #title>
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-md bg-win11-accent/10 flex items-center justify-center">
+            <svg class="w-5 h-5 text-win11-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-base font-semibold text-win11-text m-0">{{ t('nav.bop') }}</h3>
+            <p class="text-xs text-win11-text-secondary m-0">Balance of Performance</p>
+          </div>
+        </div>
+      </template>
 
-    <!-- Main Content -->
-    <div class="bop-content">
-      <!-- Left: Data Table -->
-      <div class="data-table-section">
-        <BopDataTable
-          ref="tableRef"
-          :entries="filteredEntries"
-          :selectedCount="selectedRows.length"
-          v-model:searchKeyword="searchKeyword"
-          @edit="handleEdit"
-          @delete="handleDelete"
-          @selectionChange="handleSelectionChange"
-        />
-      </div>
+      <div class="space-y-6">
+        <div class="win11-toolbar">
+          <div class="win11-toolbar-left">
+            <Win11Input
+              v-model="searchKeyword"
+              :placeholder="t('placeholder.search')"
+            />
+            <span class="text-sm text-win11-text-secondary">
+              {{ filteredEntries.length }} {{ t('common.items') }}
+            </span>
+          </div>
 
-      <!-- Right: Edit Panel -->
-      <div class="edit-panel-section">
+          <div class="win11-toolbar-right">
+            <Win11Button
+              v-if="selectedRows.length > 0"
+              variant="danger"
+              @click="handleBatchDelete"
+            >
+              {{ t('common.batchDelete') }} ({{ selectedRows.length }})
+            </Win11Button>
+            <Win11Button variant="secondary" @click="showImportDialog = true">
+              从LFM导入
+            </Win11Button>
+            <Win11Button variant="primary" @click="handleAddEntry">
+              添加BOP
+            </Win11Button>
+          </div>
+        </div>
+
+        <div class="bop-content">
+          <div class="data-table-section">
+            <BopDataTable
+              ref="tableRef"
+              :entries="filteredEntries"
+              :selectedCount="selectedRows.length"
+              v-model:searchKeyword="searchKeyword"
+              @edit="handleEdit"
+              @delete="handleDelete"
+              @selectionChange="handleSelectionChange"
+            />
+          </div>
+        </div>
+      </div>
+    </Win11Card>
+
+    <BopImportDialog
+      v-model="showImportDialog"
+      @import-entries="handleImportEntries"
+    />
+
+    <Win11Dialog
+      v-model="editingDialogVisible"
+      :title="t('title.editBop')"
+      width="760px"
+      @close="handleCancelEdit"
+    >
+      <div class="edit-dialog-body">
         <BopEditPanel
           v-if="editingEntry"
           :entry="editingEntry"
           @save="handleSave"
           @cancel="handleCancelEdit"
         />
-        <div v-else class="edit-placeholder">
-          <el-icon :size="48" class="placeholder-icon"><Select /></el-icon>
-          <p>{{ t('bop.clickToEdit') }}</p>
-          <p class="placeholder-hint">{{ t('bop.orAddNew') }}</p>
-        </div>
       </div>
-    </div>
-
-    <!-- Import Dialog -->
-    <BopImportDialog
-      v-model="showImportDialog"
-      @import-entries="handleImportEntries"
-    />
+    </Win11Dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { Plus, Download, Delete, Select } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import type { Bop, BopEntry } from '../../types/configuration'
 import BopDataTable from './BopDataTable.vue'
 import BopEditPanel from './BopEditPanel.vue'
 import BopImportDialog from './BopImportDialog.vue'
 import { t } from '../../i18n'
+import { Win11Card, Win11Input, Win11Button, Win11Dialog } from '../win11'
 
 const props = defineProps<{
   bop: Bop
@@ -81,283 +100,132 @@ const emit = defineEmits<{
   (e: 'update:bop', value: Bop): void
 }>()
 
-// 创建响应式的 bop ref
 const bopRef = ref<Bop>(props.bop)
 
-// 监听 props 变化
 watch(() => props.bop, (newVal) => {
   bopRef.value = newVal
 }, { deep: true })
 
-// 监听 bopRef 变化，同步到父组件
 watch(bopRef, (newVal) => {
   emit('update:bop', newVal)
 }, { deep: true })
 
-// ============ 状态管理 ============
 const entries = computed({
   get: () => bopRef.value.entries,
   set: (val) => { bopRef.value.entries = val }
 })
 
-// 当前选中的行对象（由 el-table @selection-change 驱动）
-const selectedRows = ref<BopEntry[]>([])
-const tableRef = ref<InstanceType<typeof BopDataTable>>()
-const editingEntry = ref<BopEntry | null>(null)
-const editingIndex = ref<number | null>(null)
 const searchKeyword = ref('')
-
-// ============ 筛选逻辑 ============
-const filteredEntries = computed(() => {
-  let result = [...entries.value]
-  const keyword = searchKeyword.value.toLowerCase().trim()
-  if (keyword) {
-    result = result.filter(entry => entry.track.toLowerCase().includes(keyword))
+const selectedRows = ref<BopEntry[]>([])
+const editingEntry = ref<BopEntry | null>(null)
+const showImportDialog = ref(false)
+const tableRef = ref<InstanceType<typeof BopDataTable> | null>(null)
+const editingDialogVisible = computed({
+  get: () => editingEntry.value !== null,
+  set: (visible: boolean) => {
+    if (!visible) editingEntry.value = null
   }
-  result.sort((a, b) => a.carModel - b.carModel)
-  return result
 })
 
-// ============ 选择逻辑 ============
+const filteredEntries = computed(() => {
+  if (!searchKeyword.value) return entries.value
+  
+  const keyword = searchKeyword.value.toLowerCase()
+  return entries.value.filter(e => 
+    e.track.toLowerCase().includes(keyword) ||
+    e.carModel.toString().includes(keyword)
+  )
+})
+
 function handleSelectionChange(rows: BopEntry[]) {
   selectedRows.value = rows
 }
 
-function clearTableSelection() {
-  tableRef.value?.clearSelection()
+function handleEdit(entry: BopEntry) {
+  editingEntry.value = { ...entry }
+}
+
+function isSameEntry(a: BopEntry, b: BopEntry) {
+  return a.track === b.track && a.carModel === b.carModel
+}
+
+function handleDelete(entry: BopEntry) {
+  const index = entries.value.findIndex((it) => isSameEntry(it, entry))
+  if (index > -1) entries.value.splice(index, 1)
+}
+
+function handleBatchDelete() {
+  selectedRows.value.forEach(row => {
+    const index = entries.value.findIndex((it) => isSameEntry(it, row))
+    if (index > -1) {
+      entries.value.splice(index, 1)
+    }
+  })
   selectedRows.value = []
 }
 
-// ============ CRUD 操作 ============
 function handleAddEntry() {
-  const newEntry: BopEntry = {
+  editingEntry.value = {
     track: 'monza',
     carModel: 0,
     ballastKg: 0,
-    restrictor: 0
-  }
-  entries.value.push(newEntry)
-  // 定位到新条目进行编辑
-  editingEntry.value = newEntry
-  editingIndex.value = entries.value.length - 1
-  ElMessage.success(t('bop.entryAdded'))
-}
-
-async function handleDelete(filteredIndex: number) {
-  // filteredIndex 是 filteredEntries 中的索引，需映射回 entries.value 的真实索引
-  const entry = filteredEntries.value[filteredIndex]
-  if (!entry) return
-  const realIndex = entries.value.indexOf(entry)
-  if (realIndex === -1) return
-
-  try {
-    await ElMessageBox.confirm(t('bop.confirmDelete'), t('common.confirm'), {
-      confirmButtonText: t('common.confirm'),
-      cancelButtonText: t('common.cancel'),
-      type: 'warning'
-    })
-
-    entries.value.splice(realIndex, 1)
-
-    if (editingIndex.value === realIndex) {
-      editingEntry.value = null
-      editingIndex.value = null
-    }
-
-    // 已删除的行会从 selectedRows 中消失（el-table 自动处理），手动同步一次
-    selectedRows.value = selectedRows.value.filter(r => r !== entry)
-
-    ElMessage.success(t('bop.entryDeleted'))
-  } catch {
-    // 用户取消
+    restrictor: 100
   }
 }
 
-async function handleBatchDelete() {
-  const count = selectedRows.value.length
-  if (count === 0) return
-
-  try {
-    await ElMessageBox.confirm(
-      t('bop.confirmBatchDelete').replace('{count}', count.toString()),
-      t('common.batchDelete'),
-      { confirmButtonText: t('common.confirm'), cancelButtonText: t('common.cancel'), type: 'warning' }
-    )
-
-    // 收集真实索引，从后往前删除避免索引偏移
-    const indices = selectedRows.value
-      .map(row => entries.value.indexOf(row))
-      .filter(i => i !== -1)
-      .sort((a, b) => b - a)
-
-    indices.forEach(i => entries.value.splice(i, 1))
-
-    clearTableSelection()
-    editingEntry.value = null
-    editingIndex.value = null
-
-    ElMessage.success(t('bop.entriesDeleted').replace('{count}', count.toString()))
-  } catch {
-    // 用户取消
-  }
-}
-
-function handleEdit(entry: BopEntry, filteredIndex: number) {
-  // 找到在 entries.value 中的真实索引
-  const realIndex = entries.value.indexOf(filteredEntries.value[filteredIndex] ?? entry)
-  editingEntry.value = { ...entry }
-  editingIndex.value = realIndex !== -1 ? realIndex : filteredIndex
-}
-
-function handleSave(updatedEntry: BopEntry) {
-  if (editingIndex.value !== null) {
-    entries.value[editingIndex.value] = { ...updatedEntry }
-    ElMessage.success(t('bop.saveSuccess'))
+function handleSave(entry: BopEntry) {
+  const existingIndex = entries.value.findIndex(e => e.track === entry.track && e.carModel === entry.carModel)
+  if (existingIndex > -1) {
+    entries.value[existingIndex] = entry
+  } else {
+    entries.value.push(entry)
   }
   editingEntry.value = null
-  editingIndex.value = null
 }
 
 function handleCancelEdit() {
   editingEntry.value = null
-  editingIndex.value = null
 }
 
-// ============ 导入 ============
-const showImportDialog = ref(false)
-
 function handleImportEntries(importedEntries: BopEntry[]) {
-  entries.value.length = 0
-  entries.value.push(...importedEntries)
-  ElMessage.success(t('bop.importSuccess').replace('{count}', importedEntries.length.toString()))
-  showImportDialog.value = false
-  clearTableSelection()
-  editingEntry.value = null
-  editingIndex.value = null
+  importedEntries.forEach(imported => {
+    const existingIndex = entries.value.findIndex(e => isSameEntry(e, imported))
+    if (existingIndex > -1) {
+      entries.value[existingIndex] = imported
+    } else {
+      entries.value.push(imported)
+    }
+  })
 }
 </script>
 
 <style scoped>
 .bop-container {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  background: var(--el-bg-color-page);
+  @apply space-y-6;
 }
 
-.bop-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  background: var(--el-bg-color);
-  border-bottom: 1px solid var(--el-border-color-light);
-  flex-shrink: 0;
+.win11-toolbar {
+  @apply flex items-center justify-between;
+  @apply bg-win11-surface rounded-lg p-4;
 }
 
-.header-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.win11-toolbar-left {
+  @apply flex items-center gap-3;
 }
 
-.header-title h3 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-}
-
-.entry-count {
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
-  background: var(--el-fill-color-light);
-  padding: 2px 8px;
-  border-radius: 10px;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.win11-toolbar-right {
+  @apply flex items-center gap-3;
 }
 
 .bop-content {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-  min-height: 0;
+  @apply w-full;
 }
 
 .data-table-section {
-  flex: 1;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  background: var(--el-bg-color-page);
-  min-width: 0;
-  border-right: 1px solid var(--el-border-color-light);
+  @apply bg-win11-surface rounded-lg p-4;
 }
 
-.edit-panel-section {
-  width: 350px;
-  flex-shrink: 0;
-  border-left: 1px solid var(--el-border-color-light);
-  background: var(--el-bg-color);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.edit-placeholder {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px;
-  text-align: center;
-  color: var(--el-text-color-secondary);
-}
-
-.placeholder-icon {
-  margin-bottom: 16px;
-  color: var(--el-text-color-placeholder);
-}
-
-.edit-placeholder p {
-  margin: 4px 0;
-  font-size: 14px;
-}
-
-.placeholder-hint {
-  font-size: 12px;
-  color: var(--el-text-color-placeholder);
-}
-
-/* 响应式布局 */
-@media (max-width: 1200px) {
-  .edit-panel-section {
-    width: 300px;
-  }
-}
-
-@media (max-width: 992px) {
-  .bop-content {
-    flex-direction: column;
-  }
-
-  .data-table-section {
-    border-right: none;
-    border-bottom: 1px solid var(--el-border-color-light);
-  }
-
-  .edit-panel-section {
-    width: 100%;
-    height: auto;
-    max-height: 400px;
-    border-left: none;
-    border-top: 1px solid var(--el-border-color-light);
-  }
+.edit-dialog-body {
+  height: min(72vh, 720px);
 }
 </style>

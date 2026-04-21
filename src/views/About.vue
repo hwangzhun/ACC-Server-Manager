@@ -1,188 +1,133 @@
 <template>
   <div class="about-page">
-    <div class="about-hero">
-      <div class="about-hero-inner">
-        <div class="about-hero-logo">
-          <img :src="logoHorizontalUrl" alt="Logo" class="logo-horizontal" />
+    <Win11Card>
+      <template #title>
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-md bg-win11-accent/10 flex items-center justify-center">
+            <svg class="w-5 h-5 text-win11-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-base font-semibold text-win11-text m-0">{{ t('nav.about') }}</h3>
+            <p class="text-xs text-win11-text-secondary m-0">Application Info</p>
+          </div>
         </div>
-        <h1 class="about-hero-title">{{ t('title.main') }}</h1>
-        <p class="about-hero-tagline">{{ t('about.tagline') }}</p>
-      </div>
-    </div>
+      </template>
 
-    <el-card class="about-card" shadow="hover">
-      <p class="about-section-kicker">{{ t('about.heading') }}</p>
-      <p class="about-body">{{ t('about.body') }}</p>
-      <p class="about-body about-body--last">{{ t('about.body2') }}</p>
+      <div class="space-y-6">
+        <div class="win11-about-hero">
+          <img :src="logoHorizontalUrl" alt="Logo" class="win11-logo" />
+          <h2 class="win11-hero-title">{{ t('title.main') }}</h2>
+          <p class="win11-hero-tagline">{{ t('about.tagline') }}</p>
+        </div>
 
-      <div class="about-meta">
-        <div class="meta-item">
-          <span class="meta-label">{{ t('about.versionLabel') }}</span>
-          <el-tag type="info" effect="plain" round>{{ appVersion }}</el-tag>
+        <Win11Divider />
+
+        <div class="win11-about-content">
+          <p class="win11-section-kicker">{{ t('about.heading') }}</p>
+          <p class="win11-body">{{ t('about.body') }}</p>
+          <p class="win11-body">{{ t('about.body2') }}</p>
         </div>
-        <div v-if="authorDisplay.length" class="meta-item">
-          <span class="meta-label">{{ t('about.authorLabel') }}</span>
-          <span class="meta-value">{{ authorDisplay }}</span>
-        </div>
-        <div v-if="repoUrl.length" class="meta-item meta-item--link">
-          <span class="meta-label">{{ t('about.repoLabel') }}</span>
-          <el-link :href="repoUrl" target="_blank" rel="noopener noreferrer" type="primary" class="github-link">
-            <el-icon class="github-link-icon"><Link /></el-icon>
-            {{ t('about.viewOnGithub') }}
-          </el-link>
+
+        <Win11Divider />
+
+        <div class="win11-meta-grid">
+          <div class="win11-meta-item">
+            <span class="win11-meta-label">{{ t('about.versionLabel') }}</span>
+            <div class="win11-meta-value">
+              <span class="win11-version-badge">{{ appVersion }}</span>
+            </div>
+          </div>
+          <div v-if="authorDisplay" class="win11-meta-item">
+            <span class="win11-meta-label">{{ t('about.authorLabel') }}</span>
+            <span class="win11-meta-value">{{ authorDisplay }}</span>
+          </div>
+          <div v-if="repoUrl" class="win11-meta-item">
+            <span class="win11-meta-label">{{ t('about.repoLabel') }}</span>
+            <a :href="repoUrl" target="_blank" rel="noopener noreferrer" class="win11-github-link">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              {{ t('about.viewOnGithub') }}
+            </a>
+          </div>
         </div>
       </div>
-    </el-card>
+    </Win11Card>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Link } from '@element-plus/icons-vue'
+import { computed } from 'vue'
 import { t } from '../i18n'
-import logoHorizontalUrl from '../assets/logo-horizontal-white.svg?url'
+import { Win11Card, Win11Divider } from '../components/win11'
+import { currentTheme } from '../i18n'
+import logoHorizontalWhiteUrl from '../assets/logo-horizontal-white.svg?url'
+import logoHorizontalBlackUrl from '../assets/logo-horizontal-black.svg?url'
 
 const appVersion = __APP_VERSION__
 const authorDisplay = __APP_AUTHOR__.trim()
 const repoUrl = __APP_REPO_URL__.trim()
+const logoHorizontalUrl = computed(() =>
+  currentTheme.value === 'light' ? logoHorizontalBlackUrl : logoHorizontalWhiteUrl
+)
 </script>
 
 <style scoped>
-.about-page {
-  max-width: 680px;
-  margin: 0 auto;
-  border-radius: 14px;
-  overflow: hidden;
-  box-shadow:
-    0 4px 6px -1px rgba(15, 23, 42, 0.08),
-    0 12px 24px -4px rgba(15, 23, 42, 0.12);
+.win11-about-hero {
+  @apply flex flex-col items-center text-center py-8;
 }
 
-.about-hero {
-  position: relative;
-  padding: 36px 32px 40px;
-  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 42%, #0c4a6e 100%);
-  color: #f8fafc;
+.win11-logo {
+  @apply h-12 mb-4 object-contain;
 }
 
-.about-hero::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse 80% 60% at 100% 0%, rgba(56, 189, 248, 0.22), transparent 55%);
-  pointer-events: none;
+.win11-hero-title {
+  @apply text-2xl font-bold text-win11-text mb-2;
 }
 
-.about-hero-inner {
-  position: relative;
-  z-index: 1;
+.win11-hero-tagline {
+  @apply text-win11-text-secondary;
 }
 
-.about-hero-logo {
-  margin-bottom: 18px;
+.win11-about-content {
+  @apply text-center;
 }
 
-.logo-horizontal {
-  display: block;
-  max-height: 52px;
-  max-width: 100%;
-  width: auto;
-  height: auto;
-  object-fit: contain;
+.win11-section-kicker {
+  @apply text-sm font-semibold text-win11-accent uppercase tracking-wide mb-3;
 }
 
-.about-hero-title {
-  margin: 0 0 12px;
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.25;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+.win11-body {
+  @apply text-win11-text leading-relaxed mb-3;
 }
 
-.about-hero-tagline {
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.55;
-  color: rgba(248, 250, 252, 0.88);
-  max-width: 36em;
+.win11-meta-grid {
+  @apply grid grid-cols-1 md:grid-cols-3 gap-4;
 }
 
-.about-card {
-  border: none;
-  border-radius: 0;
+.win11-meta-item {
+  @apply flex flex-col gap-2 p-4 rounded-lg;
+  @apply bg-win11-control-bg;
 }
 
-.about-card :deep(.el-card__body) {
-  padding: 28px 32px 32px;
+.win11-meta-label {
+  @apply text-xs text-win11-text-secondary uppercase tracking-wide;
 }
 
-.about-section-kicker {
-  margin: 0 0 14px;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #64748b;
+.win11-meta-value {
+  @apply text-win11-text font-medium;
 }
 
-.about-body {
-  margin: 0 0 14px;
-  font-size: 14px;
-  line-height: 1.7;
-  color: #334155;
+.win11-version-badge {
+  @apply inline-block px-3 py-1 rounded-full text-sm font-mono;
+  @apply bg-win11-surface text-win11-accent;
 }
 
-.about-body--last {
-  margin-bottom: 8px;
-}
-
-.about-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin-top: 22px;
-  padding-top: 22px;
-  border-top: 1px solid #e2e8f0;
-}
-
-.meta-item {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 16px;
-  min-height: 32px;
-}
-
-.meta-item--link {
-  align-items: center;
-}
-
-.meta-label {
-  flex: 0 0 100px;
-  width: 100px;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.4;
-  color: #64748b;
-}
-
-.meta-value {
-  flex: 1;
-  min-width: 0;
-  font-size: 14px;
-  line-height: 1.5;
-  color: #1e293b;
-}
-
-.github-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.github-link-icon {
-  font-size: 16px;
+.win11-github-link {
+  @apply inline-flex items-center gap-2;
+  @apply text-win11-accent hover:text-win11-accent-hover;
+  @apply transition-colors duration-200;
 }
 </style>

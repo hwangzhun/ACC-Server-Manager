@@ -3,6 +3,8 @@ export interface SshConfig {
   port: number
   username: string
   password?: string
+  /** SSH 认证方式，默认 "password" */
+  authType?: string
 }
 
 export interface ServerProfile {

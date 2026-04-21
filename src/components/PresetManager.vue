@@ -1,28 +1,30 @@
 <template>
   <div>
-    <el-button type="primary" :icon="Folder" @click="dialogVisible = true">
+    <Win11Button variant="primary" @click="dialogVisible = true">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+      </svg>
       {{ t('preset.title') }}
-    </el-button>
+    </Win11Button>
 
-    <el-dialog
+    <Win11Dialog
       v-model="dialogVisible"
       :title="t('preset.title')"
       width="820px"
-      :close-on-click-modal="false"
-      @opened="loadPresets"
+      @open="loadPresets"
     >
       <div class="preset-manager">
         <div class="preset-list">
           <div class="preset-list-header">
-            <el-input
+            <Win11Input
               v-model="searchQuery"
               :placeholder="t('preset.searchPlaceholder')"
-              :prefix-icon="Search"
+              prefix-icon="search"
               clearable
               size="small"
             />
           </div>
-          <el-scrollbar class="preset-list-content">
+          <div class="preset-list-content">
             <div
               v-for="preset in filteredPresets"
               :key="preset.name"
@@ -35,23 +37,23 @@
             >
               <div class="preset-item-name-row">
                 <span class="preset-item-name">{{ preset.name }}</span>
-                <el-tag v-if="activePresetName === preset.name" size="small" type="success" effect="plain">
+                <Win11Tag v-if="activePresetName === preset.name" size="small" type="success">
                   {{ t('preset.inUse') }}
-                </el-tag>
+                </Win11Tag>
               </div>
               <div class="preset-item-tags">
-                <el-tag size="small" type="primary" effect="plain">
+                <Win11Tag size="small" type="primary">
                   {{ trackLabel(preset.track) }}
-                </el-tag>
-                <el-tag size="small" type="success" effect="plain">
+                </Win11Tag>
+                <Win11Tag size="small" type="success">
                   {{ carGroupLabel(preset.carGroup) }}
-                </el-tag>
+                </Win11Tag>
               </div>
               <div class="preset-item-date">
                 {{ formatDate(preset.updatedAt) }}
               </div>
             </div>
-          </el-scrollbar>
+          </div>
         </div>
 
         <div class="preset-detail">
@@ -59,9 +61,9 @@
             <h4>{{ selectedPreset.name }}</h4>
             <div class="preset-info-highlight">
               <span class="preset-highlight-label">{{ t('form.track') }}</span>
-              <el-tag type="primary" effect="light">{{ trackLabel(selectedPreset.track) }}</el-tag>
+              <Win11Tag type="primary">{{ trackLabel(selectedPreset.track) }}</Win11Tag>
               <span class="preset-highlight-label">{{ t('form.carGroup') }}</span>
-              <el-tag type="success" effect="light">{{ carGroupLabel(selectedPreset.carGroup) }}</el-tag>
+              <Win11Tag type="success">{{ carGroupLabel(selectedPreset.carGroup) }}</Win11Tag>
             </div>
             <p v-if="selectedPreset.description" class="preset-description">
               {{ selectedPreset.description }}
@@ -71,103 +73,115 @@
               <div>{{ t('preset.updatedAt') }}: {{ formatDateTime(selectedPreset.updatedAt) }}</div>
             </div>
           </div>
-          <el-empty v-else :description="t('preset.emptySelect')" />
+          <Win11Empty v-else :description="t('preset.emptySelect')" />
 
           <div class="preset-actions preset-actions-primary">
-            <el-button type="primary" size="large" :icon="Plus" @click="showSaveDialog">
+            <Win11Button variant="primary" size="large" @click="showSaveDialog">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>
               {{ t('preset.saveCurrent') }}
-            </el-button>
-            <el-button
-              type="success"
+            </Win11Button>
+            <Win11Button
+              variant="success"
               size="large"
-              :icon="FolderOpened"
               :disabled="!selectedPreset"
               @click="handleLoad"
             >
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+              </svg>
               {{ t('preset.loadSelected') }}
-            </el-button>
+            </Win11Button>
           </div>
           <div class="preset-actions preset-actions-update">
-            <el-button
-              type="warning"
-              :icon="Refresh"
+            <Win11Button
+              variant="warning"
               :disabled="!selectedPreset"
               @click="handleUpdatePreset"
             >
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
               {{ t('preset.updateSelected') }}
-            </el-button>
+            </Win11Button>
             <span class="update-hint">{{ t('preset.updateHint') }}</span>
           </div>
 
           <div class="preset-actions preset-actions-secondary">
-            <el-button :icon="Edit" :disabled="!selectedPreset" @click="showRenameDialog">
+            <Win11Button :disabled="!selectedPreset" @click="showRenameDialog">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
               {{ t('preset.renameAction') }}
-            </el-button>
-            <el-button type="danger" plain :icon="Delete" :disabled="!selectedPreset" @click="handleDelete">
+            </Win11Button>
+            <Win11Button variant="danger" :disabled="!selectedPreset" @click="handleDelete">
               {{ t('common.delete') }}
-            </el-button>
+            </Win11Button>
           </div>
         </div>
       </div>
-    </el-dialog>
+    </Win11Dialog>
 
-    <el-dialog v-model="saveDialogVisible" :title="t('preset.saveDialogTitle')" width="520px">
+    <Win11Dialog v-model="saveDialogVisible" :title="t('preset.saveDialogTitle')" width="520px">
       <div class="save-context">
         <div class="save-context-title">{{ t('preset.saveContextTitle') }}</div>
         <div class="save-context-row">
           <span class="save-context-label">{{ t('form.track') }}</span>
-          <el-tag type="primary">{{ currentTrackDisplay }}</el-tag>
+          <Win11Tag type="primary">{{ currentTrackDisplay }}</Win11Tag>
         </div>
         <div class="save-context-row">
           <span class="save-context-label">{{ t('form.carGroup') }}</span>
-          <el-tag type="success">{{ currentCarGroupDisplay }}</el-tag>
+          <Win11Tag type="success">{{ currentCarGroupDisplay }}</Win11Tag>
         </div>
       </div>
-      <el-form :model="saveForm" :label-width="labelWidth" class="save-form">
-        <el-form-item :label="t('preset.presetName')" required>
-          <el-input v-model="saveForm.name" :placeholder="t('preset.placeholderName')" />
-        </el-form-item>
-        <el-form-item :label="t('preset.description')">
-          <el-input
+      <div class="save-form">
+        <div class="win11-form-field">
+          <label class="win11-form-label required">{{ t('preset.presetName') }}</label>
+          <Win11Input v-model="saveForm.name" :placeholder="t('preset.placeholderName')" />
+        </div>
+        <div class="win11-form-field">
+          <label class="win11-form-label">{{ t('preset.description') }}</label>
+          <textarea
             v-model="saveForm.description"
-            type="textarea"
+            class="win11-textarea"
             :rows="3"
             :placeholder="t('preset.placeholderDescription')"
-          />
-        </el-form-item>
-      </el-form>
+          ></textarea>
+        </div>
+      </div>
       <template #footer>
-        <el-button @click="saveDialogVisible = false">{{ t('common.cancel') }}</el-button>
-        <el-button type="primary" @click="handleSave">{{ t('common.save') }}</el-button>
+        <Win11Button variant="secondary" @click="saveDialogVisible = false">{{ t('common.cancel') }}</Win11Button>
+        <Win11Button variant="primary" @click="handleSave">{{ t('common.save') }}</Win11Button>
       </template>
-    </el-dialog>
+    </Win11Dialog>
 
-    <el-dialog v-model="renameDialogVisible" :title="t('preset.renameDialogTitle')" width="500px">
-      <el-form :model="renameForm" :label-width="labelWidth">
-        <el-form-item :label="t('preset.newName')" required>
-          <el-input v-model="renameForm.name" :placeholder="t('preset.placeholderNewName')" />
-        </el-form-item>
-        <el-form-item :label="t('preset.description')">
-          <el-input
+    <Win11Dialog v-model="renameDialogVisible" :title="t('preset.renameDialogTitle')" width="500px">
+      <div class="save-form">
+        <div class="win11-form-field">
+          <label class="win11-form-label required">{{ t('preset.newName') }}</label>
+          <Win11Input v-model="renameForm.name" :placeholder="t('preset.placeholderNewName')" />
+        </div>
+        <div class="win11-form-field">
+          <label class="win11-form-label">{{ t('preset.description') }}</label>
+          <textarea
             v-model="renameForm.description"
-            type="textarea"
+            class="win11-textarea"
             :rows="3"
             :placeholder="t('preset.placeholderDescriptionEdit')"
-          />
-        </el-form-item>
-      </el-form>
+          ></textarea>
+        </div>
+      </div>
       <template #footer>
-        <el-button @click="renameDialogVisible = false">{{ t('common.cancel') }}</el-button>
-        <el-button type="primary" @click="handleRename">{{ t('common.confirm') }}</el-button>
+        <Win11Button variant="secondary" @click="renameDialogVisible = false">{{ t('common.cancel') }}</Win11Button>
+        <Win11Button variant="primary" @click="handleRename">{{ t('common.confirm') }}</Win11Button>
       </template>
-    </el-dialog>
+    </Win11Dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, withDefaults } from 'vue'
-import { Folder, Search, Plus, FolderOpened, Edit, Delete, Refresh } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import type { AllConfigs } from '../types/configuration'
 import { formatTrackName } from '../types/defaults'
 import { getCurrentLanguage, t, currentLanguage } from '../i18n'
@@ -180,6 +194,14 @@ import {
   deletePreset,
   type Preset
 } from '../utils/presetManager'
+import {
+  Win11Button,
+  Win11Dialog,
+  Win11Input,
+  Win11Tag,
+  Win11Empty,
+  notify
+} from './win11'
 
 const props = withDefaults(
   defineProps<{
@@ -193,8 +215,6 @@ const emit = defineEmits<{
   load: [payload: { configs: AllConfigs; presetName: string }]
   activePresetChange: [name: string | null]
 }>()
-
-const labelWidth = computed(() => (getCurrentLanguage() === 'zh' ? '80px' : '100px'))
 
 function trackLabel(track?: string): string {
   const id = (track || '').trim()
@@ -275,11 +295,27 @@ function formatDateTime(dateStr: string): string {
   return date.toLocaleString(dateLocale())
 }
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+  if (typeof error === 'string' && error.trim()) {
+    return error
+  }
+  if (typeof error === 'object' && error !== null) {
+    const maybeMessage = (error as { message?: unknown }).message
+    if (typeof maybeMessage === 'string' && maybeMessage.trim()) {
+      return maybeMessage
+    }
+  }
+  return t('common.error')
+}
+
 async function loadPresets() {
   try {
     presets.value = await getPresets()
   } catch (error) {
-    ElMessage.error(`${t('preset.errLoadList')}: ${(error as Error).message}`)
+    notify.error(`${t('preset.errLoadList')}: ${getErrorMessage(error)}`)
   }
 }
 
@@ -295,17 +331,17 @@ function showSaveDialog() {
 
 async function handleSave() {
   if (!saveForm.value.name.trim()) {
-    ElMessage.warning(t('preset.warnNameRequired'))
+    notify.warning(t('preset.warnNameRequired'))
     return
   }
 
   try {
     await savePreset(saveForm.value.name.trim(), saveForm.value.description, props.configs)
-    ElMessage.success(t('preset.successSaved'))
+    notify.success(t('preset.successSaved'))
     saveDialogVisible.value = false
     await loadPresets()
   } catch (error) {
-    ElMessage.error(`${t('preset.errSave')}: ${(error as Error).message}`)
+    notify.error(`${t('preset.errSave')}: ${getErrorMessage(error)}`)
   }
 }
 
@@ -316,10 +352,10 @@ async function handleLoad() {
     const data = await loadPreset(selectedPreset.value.name)
     const presetName = selectedPreset.value.name
     emit('load', { configs: data.configs, presetName })
-    ElMessage.success(t('preset.successLoaded'))
+    notify.success(t('preset.successLoaded'))
     dialogVisible.value = false
   } catch (error) {
-    ElMessage.error(`${t('preset.errLoad')}: ${(error as Error).message}`)
+    notify.error(`${t('preset.errLoad')}: ${getErrorMessage(error)}`)
   }
 }
 
@@ -333,7 +369,7 @@ function showRenameDialog() {
 
 async function handleRename() {
   if (!renameForm.value.name.trim()) {
-    ElMessage.warning(t('preset.warnNewNameRequired'))
+    notify.warning(t('preset.warnNewNameRequired'))
     return
   }
 
@@ -342,7 +378,7 @@ async function handleRename() {
 
   try {
     await renamePreset(oldName, newName, renameForm.value.description)
-    ElMessage.success(t('preset.successRenamed'))
+    notify.success(t('preset.successRenamed'))
     renameDialogVisible.value = false
     if (props.activePresetName === oldName) {
       emit('activePresetChange', newName)
@@ -350,7 +386,7 @@ async function handleRename() {
     selectedPreset.value = null
     await loadPresets()
   } catch (error) {
-    ElMessage.error(`${t('preset.errRename')}: ${(error as Error).message}`)
+    notify.error(`${t('preset.errRename')}: ${getErrorMessage(error)}`)
   }
 }
 
@@ -359,26 +395,24 @@ async function handleUpdatePreset() {
 
   const name = selectedPreset.value.name
 
-  try {
-    await ElMessageBox.confirm(
-      t('preset.confirmUpdate').replace('{name}', name),
-      t('preset.updateDialogTitle'),
-      {
-        confirmButtonText: t('common.update'),
-        cancelButtonText: t('common.cancel'),
-        type: 'warning'
-      }
-    )
+  const confirmed = await notify.confirm({
+    title: t('preset.updateDialogTitle'),
+    message: t('preset.confirmUpdate').replace('{name}', name),
+    confirmText: t('common.update'),
+    cancelText: t('common.cancel'),
+    type: 'warning'
+  })
 
+  if (!confirmed) return
+
+  try {
     await updatePreset(name, props.configs)
-    ElMessage.success(t('preset.successUpdated'))
+    notify.success(t('preset.successUpdated'))
     await loadPresets()
     const found = presets.value.find(p => p.name === name)
     selectedPreset.value = found ?? null
   } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error(`${t('preset.errUpdate')}: ${(error as Error).message}`)
-    }
+    notify.error(`${t('preset.errUpdate')}: ${getErrorMessage(error)}`)
   }
 }
 
@@ -387,28 +421,26 @@ async function handleDelete() {
 
   const name = selectedPreset.value.name
 
-  try {
-    await ElMessageBox.confirm(
-      t('preset.confirmDelete').replace('{name}', name),
-      t('preset.deleteDialogTitle'),
-      {
-        confirmButtonText: t('common.delete'),
-        cancelButtonText: t('common.cancel'),
-        type: 'warning'
-      }
-    )
+  const confirmed = await notify.confirm({
+    title: t('preset.deleteDialogTitle'),
+    message: t('preset.confirmDelete').replace('{name}', name),
+    confirmText: t('common.delete'),
+    cancelText: t('common.cancel'),
+    type: 'warning'
+  })
 
+  if (!confirmed) return
+
+  try {
     await deletePreset(name)
-    ElMessage.success(t('preset.successDeleted'))
+    notify.success(t('preset.successDeleted'))
     if (props.activePresetName === name) {
       emit('activePresetChange', null)
     }
     selectedPreset.value = null
     await loadPresets()
   } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error(`${t('preset.errDelete')}: ${(error as Error).message}`)
-    }
+    notify.error(`${t('preset.errDelete')}: ${getErrorMessage(error)}`)
   }
 }
 
@@ -428,35 +460,37 @@ onMounted(() => {
   width: 300px;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #e4e7ed;
+  border-right: 1px solid var(--win11-border);
   padding-right: 15px;
 }
 
 .preset-list-header {
   padding-bottom: 15px;
-  border-bottom: 1px solid #e4e7ed;
+  border-bottom: 1px solid var(--win11-border);
   margin-bottom: 10px;
 }
 
 .preset-list-content {
   flex: 1;
+  overflow-y: auto;
 }
 
 .preset-item {
   padding: 12px 10px;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 8px;
   transition: background-color 0.2s;
   margin-bottom: 4px;
+  border: 1px solid transparent;
 }
 
 .preset-item:hover {
-  background-color: #f5f7fa;
+  background: var(--win11-control-hover-bg);
 }
 
 .preset-item.active {
-  background-color: #ecf5ff;
-  border-left: 3px solid #409eff;
+  background: var(--win11-control-bg);
+  border-color: var(--win11-accent);
 }
 
 .preset-item.in-use:not(.active) {
@@ -473,7 +507,7 @@ onMounted(() => {
 
 .preset-item-name {
   font-weight: 500;
-  color: #303133;
+  color: var(--win11-text);
 }
 
 .preset-item-tags {
@@ -485,7 +519,7 @@ onMounted(() => {
 
 .preset-item-date {
   font-size: 12px;
-  color: #909399;
+  color: var(--win11-text-secondary);
 }
 
 .preset-detail {
@@ -499,14 +533,14 @@ onMounted(() => {
 .preset-info {
   flex: 1;
   padding: 15px;
-  background-color: #f5f7fa;
+  background: var(--win11-control-bg);
   border-radius: 8px;
   margin-bottom: 16px;
 }
 
 .preset-info h4 {
   margin: 0 0 12px 0;
-  color: #303133;
+  color: var(--win11-text);
   font-size: 18px;
 }
 
@@ -520,11 +554,11 @@ onMounted(() => {
 
 .preset-highlight-label {
   font-size: 12px;
-  color: #909399;
+  color: var(--win11-text-secondary);
 }
 
 .preset-description {
-  color: #606266;
+  color: var(--win11-text-secondary);
   font-size: 14px;
   margin-bottom: 15px;
   line-height: 1.5;
@@ -532,7 +566,7 @@ onMounted(() => {
 
 .preset-meta {
   font-size: 12px;
-  color: #909399;
+  color: var(--win11-text-secondary);
   line-height: 1.8;
 }
 
@@ -542,15 +576,11 @@ onMounted(() => {
   gap: 10px;
 }
 
-.preset-actions .el-button {
-  margin: 0;
-}
-
 .preset-actions-primary {
   margin-bottom: 12px;
 }
 
-.preset-actions-primary .el-button {
+.preset-actions-primary :deep(.win11-button) {
   flex: 1;
   min-width: 140px;
 }
@@ -563,7 +593,7 @@ onMounted(() => {
 
 .update-hint {
   font-size: 12px;
-  color: #909399;
+  color: var(--win11-text-secondary);
   line-height: 1.4;
   flex: 1;
   min-width: 160px;
@@ -571,21 +601,21 @@ onMounted(() => {
 
 .preset-actions-secondary {
   padding-top: 4px;
-  border-top: 1px solid #ebeef5;
+  border-top: 1px solid var(--win11-border);
 }
 
 .save-context {
   padding: 12px 14px;
   margin-bottom: 16px;
-  background: var(--el-fill-color-light);
+  background: var(--win11-control-bg);
   border-radius: 8px;
-  border: 1px solid var(--el-border-color-lighter);
+  border: 1px solid var(--win11-border);
 }
 
 .save-context-title {
   font-size: 13px;
   font-weight: 600;
-  color: var(--el-text-color-primary);
+  color: var(--win11-text);
   margin-bottom: 10px;
 }
 
@@ -603,11 +633,54 @@ onMounted(() => {
 .save-context-label {
   width: 72px;
   font-size: 13px;
-  color: var(--el-text-color-secondary);
+  color: var(--win11-text-secondary);
   flex-shrink: 0;
 }
 
 .save-form {
   margin-top: 4px;
+}
+
+.win11-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.win11-form-field:last-child {
+  margin-bottom: 0;
+}
+
+.win11-form-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--win11-text);
+}
+
+.win11-form-label.required::after {
+  content: ' *';
+  color: #d13438;
+}
+
+.win11-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--win11-text);
+  background: var(--win11-control-bg);
+  border: 1px solid var(--win11-border);
+  border-radius: 6px;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.win11-textarea:focus {
+  border-color: var(--win11-accent);
+}
+
+.win11-textarea::placeholder {
+  color: var(--win11-text-secondary);
 }
 </style>

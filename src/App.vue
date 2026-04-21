@@ -1,9 +1,11 @@
 <template>
   <Home />
+  <Win11Notify />
 </template>
 
 <script setup lang="ts">
 import Home from './views/Home.vue'
+import Win11Notify from './components/win11/Win11Notify.vue'
 </script>
 
 <style>

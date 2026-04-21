@@ -197,90 +197,104 @@ export function normalizeTrackNameFromApi(
 export const CAR_GROUPS = ['FreeForAll', 'GT3', 'GT4', 'GT2', 'GTC', 'TCX']
 
 // 默认配置值
-export const defaultConfiguration: Configuration = {
-  udpPort: 9231,
-  tcpPort: 9232,
-  maxConnections: 30,
-  lanDiscovery: 0,
-  registerToLobby: 1,
-  configVersion: 1
+export function defaultConfiguration(): Configuration {
+  return {
+    udpPort: 9231,
+    tcpPort: 9232,
+    maxConnections: 30,
+    lanDiscovery: 0,
+    registerToLobby: 1,
+    configVersion: 1
+  }
 }
 
-export const defaultSettings: Settings = {
-  serverName: 'My ACC Server',
-  adminPassword: 'admin',
-  password: '',
-  spectatorPassword: '',
-  centralEntryListPath: '',
-  carGroup: 'GT3',
-  trackMedalsRequirement: 0,
-  safetyRatingRequirement: -1,
-  racecraftRatingRequirement: -1,
-  maxCarSlots: 20,
-  isRaceLocked: 0,
-  isLockedPrepPhase: 0,
-  shortFormationLap: 1,
-  dumpLeaderboards: 1,
-  dumpEntryList: 1,
-  randomizeTrackWhenEmpty: 0,
-  allowAutoDQ: 1,
-  ignorePrematureDisconnects: 0,
-  formationLapType: 3,
-  configVersion: 1
+export function defaultSettings(): Settings {
+  return {
+    serverName: 'My ACC Server',
+    adminPassword: 'admin',
+    password: '',
+    spectatorPassword: '',
+    centralEntryListPath: '',
+    carGroup: 'GT3',
+    trackMedalsRequirement: 0,
+    safetyRatingRequirement: -1,
+    racecraftRatingRequirement: -1,
+    maxCarSlots: 20,
+    isRaceLocked: 0,
+    isLockedPrepPhase: 0,
+    shortFormationLap: 1,
+    dumpLeaderboards: 1,
+    dumpEntryList: 1,
+    randomizeTrackWhenEmpty: 0,
+    allowAutoDQ: 1,
+    ignorePrematureDisconnects: 0,
+    formationLapType: 3,
+    configVersion: 1
+  }
 }
 
-export const defaultEvent: Event = {
-  ambientTemp: 22,
-  cloudLevel: 0.1,
-  configVersion: 1,
-  isFixedConditionQualification: 0,
-  postQualySeconds: 120,
-  postRaceSeconds: 120,
-  preRaceWaitingTimeSeconds: 80,
-  rain: 0.0,
-  sessionOverTimeSeconds: 120,
-  sessions: [
-    { dayOfWeekend: 2, hourOfDay: 14, sessionDurationMinutes: 60, sessionType: 'P', timeMultiplier: 1 },
-    { dayOfWeekend: 2, hourOfDay: 15, sessionDurationMinutes: 15, sessionType: 'Q', timeMultiplier: 1 },
-    { dayOfWeekend: 2, hourOfDay: 16, sessionDurationMinutes: 60, sessionType: 'R', timeMultiplier: 1 }
-  ],
-  simracerWeatherConditions: 0,
-  track: 'monza',
-  weatherRandomness: 1
+export function defaultEvent(): Event {
+  return {
+    ambientTemp: 22,
+    cloudLevel: 0.1,
+    configVersion: 1,
+    isFixedConditionQualification: 0,
+    postQualySeconds: 120,
+    postRaceSeconds: 120,
+    preRaceWaitingTimeSeconds: 80,
+    rain: 0.0,
+    sessionOverTimeSeconds: 120,
+    sessions: [
+      { dayOfWeekend: 2, hourOfDay: 14, sessionDurationMinutes: 60, sessionType: 'P', timeMultiplier: 1 },
+      { dayOfWeekend: 2, hourOfDay: 15, sessionDurationMinutes: 15, sessionType: 'Q', timeMultiplier: 1 },
+      { dayOfWeekend: 2, hourOfDay: 16, sessionDurationMinutes: 60, sessionType: 'R', timeMultiplier: 1 }
+    ],
+    simracerWeatherConditions: 0,
+    track: 'monza',
+    weatherRandomness: 1
+  }
 }
 
-export const defaultEventRules: EventRules = {
-  qualifyStandingType: 1,
-  pitWindowLengthSec: -1,
-  driverStintTimeSec: 0,
-  mandatoryPitstopCount: 0,
-  maxTotalDrivingTime: 0,
-  maxDriversCount: 1,
-  tyreSetCount: 50,
-  isRefuellingAllowedInRace: true,
-  isRefuellingTimeFixed: false,
-  isMandatoryPitstopRefuellingRequired: false,
-  isMandatoryPitstopTyreChangeRequired: false,
-  isMandatoryPitstopSwapDriverRequired: false
+export function defaultEventRules(): EventRules {
+  return {
+    qualifyStandingType: 1,
+    pitWindowLengthSec: -1,
+    driverStintTimeSec: 0,
+    mandatoryPitstopCount: 0,
+    maxTotalDrivingTime: 0,
+    maxDriversCount: 1,
+    tyreSetCount: 50,
+    isRefuellingAllowedInRace: true,
+    isRefuellingTimeFixed: false,
+    isMandatoryPitstopRefuellingRequired: false,
+    isMandatoryPitstopTyreChangeRequired: false,
+    isMandatoryPitstopSwapDriverRequired: false
+  }
 }
 
-export const defaultAssistRules: AssistRules = {
-  disableIdealLine: 0,
-  disableAutosteer: 0,
-  stabilityControlLevelMax: 100,
-  disableAutoPitLimiter: 0,
-  disableAutoGear: 0,
-  disableAutoClutch: 0,
-  disableAutoEngineStart: 0,
-  disableAutoWiper: 0,
-  disableAutoLights: 0
+export function defaultAssistRules(): AssistRules {
+  return {
+    disableIdealLine: 0,
+    disableAutosteer: 0,
+    stabilityControlLevelMax: 100,
+    disableAutoPitLimiter: 0,
+    disableAutoGear: 0,
+    disableAutoClutch: 0,
+    disableAutoEngineStart: 0,
+    disableAutoWiper: 0,
+    disableAutoLights: 0
+  }
 }
 
-export const defaultEntryList: EntryList = {
-  entries: [],
-  forceEntryList: 0
+export function defaultEntryList(): EntryList {
+  return {
+    entries: [],
+    forceEntryList: 0
+  }
 }
 
-export const defaultBop: Bop = {
-  entries: []
+export function defaultBop(): Bop {
+  return {
+    entries: []
+  }
 }

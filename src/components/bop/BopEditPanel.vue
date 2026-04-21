@@ -5,165 +5,154 @@
     </div>
 
     <div class="panel-content">
-      <!-- 车型预览卡片 -->
       <div class="car-preview-card">
-        <div class="image-wrapper">
-          <el-image
-            :src="getCarImageUrl(formData.carModel)"
-            class="car-image"
-            fit="cover"
-            @error="handleImageError"
-          >
-            <template #error>
-              <div class="image-placeholder">
-                <el-icon :size="36"><Picture /></el-icon>
+        <div class="car-preview-layout">
+          <div class="car-thumb-wrap">
+            <div class="car-thumb-frame">
+              <img
+                v-if="carPreviewSrc && !carPreviewError"
+                :src="carPreviewSrc"
+                alt=""
+                class="car-thumb-img"
+                loading="lazy"
+                @error="carPreviewError = true"
+                @load="carPreviewError = false"
+              />
+              <div v-else class="car-thumb-placeholder">
+                <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
               </div>
-            </template>
-          </el-image>
-          <!-- 赛道标签叠加在图片左上角 -->
-          <div class="track-badge">
-            <el-icon :size="11"><Location /></el-icon>
-            {{ formatTrackName(formData.track) }}
+            </div>
           </div>
-        </div>
-        <div class="car-info-row">
-          <div class="car-name-block">
-            <span class="car-name">{{ getCarName(formData.carModel) }}</span>
-            <span class="car-id">ID {{ formData.carModel }}</span>
+          <div class="car-info-aside">
+            <div class="car-info-track">
+              <svg class="car-info-track-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <span>{{ formatTrackName(formData.track) }}</span>
+            </div>
+            <div class="car-name">{{ getCarName(formData.carModel) }}</div>
+            <div class="car-info-sub">
+              <span class="car-id">ID {{ formData.carModel }}</span>
+              <Win11Tag :type="getCarClassType(formData.carModel)" size="small">
+                {{ getCarClass(formData.carModel) }}
+              </Win11Tag>
+            </div>
           </div>
-          <el-tag :type="getCarClassType(formData.carModel)" size="small" class="car-class-tag">
-            {{ getCarClass(formData.carModel) }}
-          </el-tag>
         </div>
       </div>
 
-      <!-- 编辑表单 -->
-      <el-form ref="formRef" :model="formData" label-position="top" class="edit-form">
-        <!-- 赛道（与 TRACK_NAMES 一致） -->
-        <el-form-item :label="t('form.track')">
-          <el-select
+      <div class="edit-form">
+        <div class="win11-form-field">
+          <label class="win11-form-label">{{ t('form.track') }}</label>
+          <Win11Select
             v-model="formData.track"
+            :options="trackOptions"
             :placeholder="t('common.pleaseSelect')"
             filterable
             style="width: 100%"
-          >
-            <el-option
-              v-for="key in trackSelectKeys"
-              :key="key"
-              :label="formatTrackName(key)"
-              :value="key"
-            />
-          </el-select>
-        </el-form-item>
+          />
+        </div>
 
-        <!-- 车型选择 -->
-        <el-form-item :label="t('form.carModel')">
-          <el-select v-model="formData.carModel" :placeholder="t('common.pleaseSelect')" filterable style="width: 100%">
-            <el-option-group label="GT3">
-              <el-option v-for="car in gt3Cars" :key="car.value" :label="car.label" :value="car.value" />
-            </el-option-group>
-            <el-option-group label="GT4">
-              <el-option v-for="car in gt4Cars" :key="car.value" :label="car.label" :value="car.value" />
-            </el-option-group>
-            <el-option-group label="GT2">
-              <el-option v-for="car in gt2Cars" :key="car.value" :label="car.label" :value="car.value" />
-            </el-option-group>
-          </el-select>
-        </el-form-item>
+        <div class="win11-form-field">
+          <label class="win11-form-label">{{ t('form.carModel') }}</label>
+          <Win11Select
+            v-model="formData.carModel"
+            :options="carModelOptions"
+            :placeholder="t('common.pleaseSelect')"
+            filterable
+            style="width: 100%"
+          />
+        </div>
 
-        <!-- 配重 -->
-        <el-form-item>
-          <template #label>
-            <div class="field-label-row">
-              <span>{{ t('form.ballastKg') }}</span>
-              <div class="label-right">
-                <el-input-number
-                  v-model="formData.ballastKg"
-                  :min="-40"
-                  :max="40"
-                  :step="1"
-                  controls-position="right"
-                  size="small"
-                  style="width: 100px"
-                />
-                <el-tag
-                  :type="formData.ballastKg > 0 ? 'danger' : formData.ballastKg < 0 ? 'success' : 'info'"
-                  size="small"
-                >
-                  {{ formData.ballastKg > 0 ? `+${formData.ballastKg}kg` : formData.ballastKg < 0 ? `${formData.ballastKg}kg` : t('bop.standard') }}
-                </el-tag>
-              </div>
+        <div class="win11-form-field">
+          <div class="field-label-row">
+            <span class="win11-form-label">{{ t('form.ballastKg') }}</span>
+            <div class="label-right">
+              <Win11InputNumber
+                v-model="formData.ballastKg"
+                :min="-40"
+                :max="40"
+              />
+              <Win11Tag
+                :type="formData.ballastKg > 0 ? 'danger' : formData.ballastKg < 0 ? 'success' : 'info'"
+                size="small"
+              >
+                {{ formData.ballastKg > 0 ? `+${formData.ballastKg}kg` : formData.ballastKg < 0 ? `${formData.ballastKg}kg` : t('bop.standard') }}
+              </Win11Tag>
             </div>
-          </template>
-          <el-slider
+          </div>
+          <Win11Slider
             v-model="formData.ballastKg"
             :min="-40"
             :max="40"
-            :step="1"
             :color="getBallastColor(formData.ballastKg)"
           />
-        </el-form-item>
+        </div>
 
-        <!-- 进气限制器 -->
-        <el-form-item>
-          <template #label>
-            <div class="field-label-row">
-              <span>{{ t('bop.restrictor') }}</span>
-              <div class="label-right">
-                <el-input-number
-                  v-model="formData.restrictor"
-                  :min="0"
-                  :max="20"
-                  :step="1"
-                  controls-position="right"
-                  size="small"
-                  style="width: 100px"
-                />
-                <el-tag :type="restrictorDisplay === 0 ? 'success' : 'warning'" size="small">
-                  {{
-                    restrictorDisplay === 0
-                      ? t('bop.noRestriction')
-                      : t('bop.restricted').replace('{value}', String(restrictorDisplay))
-                  }}
-                </el-tag>
-              </div>
+        <div class="win11-form-field">
+          <div class="field-label-row">
+            <span class="win11-form-label">{{ t('bop.restrictor') }}</span>
+            <div class="label-right">
+              <Win11InputNumber
+                v-model="formData.restrictor"
+                :min="0"
+                :max="20"
+              />
+              <Win11Tag :type="restrictorDisplay === 0 ? 'success' : 'warning'" size="small">
+                {{
+                  restrictorDisplay === 0
+                    ? t('bop.noRestriction')
+                    : t('bop.restricted').replace('{value}', String(restrictorDisplay))
+                }}
+              </Win11Tag>
             </div>
-          </template>
-          <el-slider
+          </div>
+          <Win11Slider
             v-model="formData.restrictor"
             :min="0"
             :max="20"
-            :step="1"
             :color="getRestrictorColor(restrictorDisplay)"
           />
-        </el-form-item>
-      </el-form>
+        </div>
+      </div>
     </div>
 
     <div class="panel-footer">
-      <el-button size="default" @click="handleCancel">
-        <el-icon><Close /></el-icon>
+      <Win11Button variant="secondary" @click="handleCancel">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
         {{ t('common.cancel') }}
-      </el-button>
-      <el-button type="primary" size="default" @click="handleSave">
-        <el-icon><Check /></el-icon>
+      </Win11Button>
+      <Win11Button variant="primary" @click="handleSave">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
         {{ t('common.save') }}
-      </el-button>
+      </Win11Button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, computed } from 'vue'
-import { Check, Close, Picture, Location } from '@element-plus/icons-vue'
-import type { FormInstance } from 'element-plus'
+import { reactive, watch, computed, ref } from 'vue'
 import type { BopEntry } from '../../types/configuration'
 import { carModels, getCarImageUrl } from '../../data/mappings'
 import { clampAccBopRestrictor } from '../../utils/lfmBopService'
 import { TRACKS } from '../../types/defaults'
 import { useTrackName, getCarLocalizedName } from '../../i18n/mappings'
-import { getCarClass } from './composables/useBopFilter'
+import { getCarClass } from './utils'
 import { t } from '../../i18n'
+import {
+  Win11Button,
+  Win11Tag,
+  Win11Select,
+  Win11InputNumber,
+  Win11Slider
+} from '../win11'
 
 const props = defineProps<{
   entry: BopEntry
@@ -174,7 +163,6 @@ const emit = defineEmits<{
   (e: 'cancel'): void
 }>()
 
-const formRef = ref<FormInstance>()
 const formData = reactive<BopEntry>({
   track: 'monza',
   carModel: 0,
@@ -182,15 +170,33 @@ const formData = reactive<BopEntry>({
   restrictor: 0
 })
 
-/** ACC 限制器 0–20；不完整数据时归一化 */
 const restrictorDisplay = computed(() => clampAccBopRestrictor(formData.restrictor))
 
-/** 赛道选项：TRACK_NAMES 的 key（TRACKS），并保留当前条目不在表内时的值 */
-const trackSelectKeys = computed(() => {
+const carPreviewError = ref(false)
+const carPreviewSrc = computed(() => getCarImageUrl(formData.carModel) || '')
+
+watch(
+  () => formData.carModel,
+  () => {
+    carPreviewError.value = false
+  }
+)
+
+const trackOptions = computed(() => {
   const set = new Set<string>(TRACKS)
   const cur = formData.track?.trim()
   if (cur) set.add(cur)
-  return [...set].sort((a, b) => a.localeCompare(b))
+  return [...set].sort((a, b) => a.localeCompare(b)).map(key => ({
+    value: key,
+    label: useTrackName(key).value
+  }))
+})
+
+const carModelOptions = computed(() => {
+  return Object.keys(carModels)
+    .map(k => Number(k))
+    .map(v => ({ value: v, label: getCarLocalizedName(v) }))
+    .sort((a, b) => a.value - b.value)
 })
 
 function applyEntryToForm(entry: BopEntry) {
@@ -229,36 +235,11 @@ watch(
   }
 )
 
-// 车型选项分组（文案随界面语言变化，下拉已 filterable）
-const gt3Cars = computed(() =>
-  Object.keys(carModels)
-    .map((k) => Number(k))
-    .filter((id) => getCarClass(id) === 'GT3')
-    .map((v) => ({ value: v, label: getCarLocalizedName(v) }))
-    .sort((a, b) => a.value - b.value)
-)
-
-const gt4Cars = computed(() =>
-  Object.keys(carModels)
-    .map((k) => Number(k))
-    .filter((id) => getCarClass(id) === 'GT4')
-    .map((v) => ({ value: v, label: getCarLocalizedName(v) }))
-    .sort((a, b) => a.value - b.value)
-)
-
-const gt2Cars = computed(() =>
-  Object.keys(carModels)
-    .map((k) => Number(k))
-    .filter((id) => getCarClass(id) === 'GT2')
-    .map((v) => ({ value: v, label: getCarLocalizedName(v) }))
-    .sort((a, b) => a.value - b.value)
-)
-
 function getCarName(carId: number): string {
   return getCarLocalizedName(carId)
 }
 
-function getCarClassType(carModel: number): string {
+function getCarClassType(carModel: number): 'primary' | 'success' | 'warning' | 'info' {
   const cls = getCarClass(carModel)
   switch (cls) {
     case 'GT3': return 'primary'
@@ -285,8 +266,6 @@ function getRestrictorColor(restrictor: number): string {
   return '#f56c6c'
 }
 
-function handleImageError() {}
-
 function handleSave() {
   emit('save', {
     ...formData,
@@ -304,12 +283,12 @@ function handleCancel() {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--el-bg-color);
+  background: var(--win11-surface);
 }
 
 .panel-header {
   padding: 14px 16px;
-  border-bottom: 1px solid var(--el-border-color-light);
+  border-bottom: 1px solid var(--win11-border);
   flex-shrink: 0;
 }
 
@@ -317,7 +296,7 @@ function handleCancel() {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--el-text-color-primary);
+  color: var(--win11-text);
 }
 
 .panel-content {
@@ -337,129 +316,131 @@ function handleCancel() {
   gap: 10px;
   flex-shrink: 0;
   padding: 12px 16px;
-  border-top: 1px solid var(--el-border-color-light);
-  background: var(--el-bg-color);
+  border-top: 1px solid var(--win11-border);
+  background: var(--win11-surface);
 }
 
-/* 车型预览卡片 */
 .car-preview-card {
   border-radius: 10px;
-  overflow: hidden;
-  border: 1px solid var(--el-border-color-light);
+  border: 1px solid var(--win11-border);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  background: var(--win11-surface);
 }
 
-.image-wrapper {
-  position: relative;
+.car-preview-layout {
+  display: flex;
+  align-items: stretch;
+  gap: 16px;
+  padding: 14px 16px;
 }
 
-.car-image {
+.car-thumb-wrap {
+  flex-shrink: 0;
+}
+
+.car-thumb-frame {
+  width: 132px;
+  height: 80px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--win11-control-bg);
+  border: 1px solid var(--win11-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.car-thumb-img {
   width: 100%;
-  height: 120px;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
   display: block;
-  background: linear-gradient(135deg, var(--el-fill-color) 0%, var(--el-fill-color-dark) 100%);
 }
 
-.image-placeholder {
+.car-thumb-placeholder {
   width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--el-text-color-placeholder);
-  background: linear-gradient(135deg, var(--el-fill-color) 0%, var(--el-fill-color-dark) 100%);
+  color: var(--win11-text-secondary);
 }
 
-/* 赛道标签叠加 */
-.track-badge {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(4px);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 500;
-  border-radius: 20px;
-  line-height: 1.4;
-}
-
-.car-info-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px;
-  background: var(--el-bg-color);
-}
-
-.car-name-block {
+.car-info-aside {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  min-width: 0;
+  justify-content: center;
+  gap: 8px;
+}
+
+.car-info-track {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--win11-text-secondary);
+}
+
+.car-info-track-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0.85;
 }
 
 .car-name {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
-  color: var(--el-text-color-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: var(--win11-text);
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.car-info-sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }
 
 .car-id {
-  font-size: 11px;
-  color: var(--el-text-color-placeholder);
+  font-size: 12px;
+  color: var(--win11-text-secondary);
 }
 
-.car-class-tag {
-  flex-shrink: 0;
-}
-
-/* 表单 */
 .edit-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
-.edit-form :deep(.el-form-item) {
-  margin-bottom: 0;
+.win11-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.edit-form :deep(.el-form-item__label) {
-  padding-bottom: 6px;
-  width: 100%;
+.win11-form-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--win11-text);
 }
 
-/* label 行：左侧文字 + 右侧输入框和 Tag */
 .field-label-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  width: 100%;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--el-text-color-primary);
+  gap: 8px;
 }
 
 .label-right {
   display: flex;
   align-items: center;
-  gap: 6px;
-}
-
-/* 滑块 */
-:deep(.el-slider) {
-  padding: 0 4px;
-}
-
-:deep(.el-slider__runway) {
-  margin: 10px 0 6px;
+  gap: 8px;
 }
 </style>

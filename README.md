@@ -124,6 +124,10 @@ A modern configuration tool for **Assetto Corsa Competizione (ACC)** game server
 
 ## 更新日志  / Updatelog
 
+V2.0.0 - 2026/4/21
+- **UI 全面升级**：从 Web 网页重构为 Tauri 桌面应用。
+- **Complete UI overhaul**: Refactoring a Web Application into a Tauri Desktop App
+
 V1.1.1 - 2026/4/6
 - 项目展示名由 ACC Server Manager 更名为 **ACC Pitwall**（本地包名 `acc-pitwall`），因与其他项目重名。
 - Renamed the product from **ACC Server Manager** to **ACC Pitwall** (local package name `acc-pitwall`) due to a naming conflict with another project.

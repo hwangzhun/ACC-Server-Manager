@@ -15,7 +15,11 @@
         "title": "ACC Pitwall",
         "width": 1400,
         "height": 900,
-        "devtools": true
+        "devtools": true,
+        "decorations": false,
+        "transparent": true,
+        "resizable": true,
+        "center": true
       }
     ]
   },

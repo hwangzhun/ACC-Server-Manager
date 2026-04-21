@@ -47,36 +47,55 @@ export function validateConfig(content: unknown): boolean {
  * 从公共配置文件夹加载所有配置
  */
 export async function loadConfigsFromPublic(): Promise<AllConfigs | null> {
-  try {
-    const [
-      configuration,
-      settings,
-      event,
-      eventRules,
-      assistRules,
-      entryList,
-      bop
-    ] = await Promise.all([
-      fetch('/cfg/configuration.json').then(r => r.json()),
-      fetch('/cfg/settings.json').then(r => r.json()),
-      fetch('/cfg/event.json').then(r => r.json()),
-      fetch('/cfg/eventRules.json').then(r => r.json()),
-      fetch('/cfg/assistRules.json').then(r => r.json()),
-      fetch('/cfg/entrylist.json').then(r => r.json()),
-      fetch('/cfg/bop.json').then(r => r.json())
-    ])
+  const configUrls = [
+    '/cfg/configuration.json',
+    '/cfg/settings.json',
+    '/cfg/event.json',
+    '/cfg/eventRules.json',
+    '/cfg/assistRules.json',
+    '/cfg/entrylist.json',
+    '/cfg/bop.json'
+  ]
 
-    return {
-      configuration,
-      settings,
-      event,
-      eventRules,
-      assistRules,
-      entryList: normalizeEntryList(entryList as Partial<EntryList>),
-      bop,
+  const results = await Promise.allSettled(
+    configUrls.map(url => 
+      fetch(url)
+        .then(async response => {
+          if (!response.ok) {
+            throw new Error(`${CONFIG_FILE_NAMES[configUrls.indexOf(url)]} 加载失败 (${response.status})`)
+          }
+          return response.json()
+        })
+    )
+  )
+
+  const errors: string[] = []
+  const values: unknown[] = []
+
+  results.forEach((result, index) => {
+    if (result.status === 'rejected') {
+      errors.push(`加载 ${CONFIG_FILE_NAMES[index]} 失败: ${result.reason?.message || result.reason}`)
+    } else {
+      values.push(result.value)
     }
-  } catch (error) {
-    console.error('加载配置文件失败:', error)
+  })
+
+  if (errors.length > 0) {
+    console.error('配置文件加载错误:', errors)
+  }
+
+  if (values.length !== configUrls.length) {
+    console.error(`只有 ${values.length}/${configUrls.length} 个配置文件加载成功`)
     return null
+  }
+
+  return {
+    configuration: values[0] as AllConfigs['configuration'],
+    settings: values[1] as AllConfigs['settings'],
+    event: values[2] as AllConfigs['event'],
+    eventRules: values[3] as AllConfigs['eventRules'],
+    assistRules: values[4] as AllConfigs['assistRules'],
+    entryList: normalizeEntryList(values[5] as Partial<EntryList>),
+    bop: values[6] as AllConfigs['bop'],
   }
 }

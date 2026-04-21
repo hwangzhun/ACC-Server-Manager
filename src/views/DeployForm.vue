@@ -1,1635 +1,294 @@
 <template>
   <div class="deploy-form">
-    <el-card class="connection-config">
-      <template #header>
-        <div class="card-header">
-          <span>{{ t('deploy.sshConfig') }}</span>
-          <el-tag v-if="isConnected" type="success" size="small">
-            {{ t('deploy.connected') }}: {{ connectionStatus.host }}
-          </el-tag>
-          <el-tag v-else type="info" size="small">{{ t('deploy.notConnected') }}</el-tag>
+    <Win11Card>
+      <template #title>
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-md bg-win11-accent/10 flex items-center justify-center">
+            <svg class="w-5 h-5 text-win11-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-base font-semibold text-win11-text m-0">{{ t('deploy.sshConfig') }}</h3>
+            <p class="text-xs text-win11-text-secondary m-0">Server Deployment</p>
+          </div>
         </div>
       </template>
 
-      <el-form :model="sshConfig" label-width="120px">
-        <el-form-item :label="t('deploy.selectServer')">
-          <el-select
-            v-model="selectedServerName"
-            :placeholder="t('deploy.selectSavedServer')"
-            clearable
-            filterable
-            style="width: 100%"
-            @change="handleServerSelect"
-          >
-            <el-option
-              v-for="server in serverList"
-              :key="server.name"
-              :label="`${server.name} (${server.host})`"
-              :value="server.name"
-            />
-          </el-select>
-        </el-form-item>
+      <div class="space-y-6">
+        <DeploySshPanel
+          :is-connected="isConnected"
+          :connecting="connecting"
+          :connection-status="connectionStatus"
+          :validation-errors="validationErrors"
+          :server-list="serverList"
+          :selected-server-name="selectedServerName"
+          :loading="loading"
+          :ssh-config="sshConfig"
+          @update:selected-server-name="handleServerSelect"
+          @connect="handleConnect"
+          @disconnect="handleDisconnect"
+          @create-server="showCreateDialog"
+          @edit-server="showEditDialog"
+          @delete="handleDeleteServer"
+        />
 
-        <el-form-item :label="t('deploy.serverAddress')" required>
-          <el-input
-            v-model="sshConfig.host"
-            :placeholder="t('deploy.inputServerAddress')"
-            :class="{ 'is-error': validationErrors.host }"
-            @input="validateForm"
-          />
-          <div v-if="validationErrors.host" class="el-form-item__error">
-            {{ validationErrors.host }}
-          </div>
-        </el-form-item>
-        <el-form-item :label="t('deploy.port')" required>
-          <el-input-number
-            v-model="sshConfig.port"
-            :min="1"
-            :max="65535"
-            :class="{ 'is-error': validationErrors.port }"
-            @change="validateForm"
-          />
-          <div v-if="validationErrors.port" class="el-form-item__error">
-            {{ validationErrors.port }}
-          </div>
-        </el-form-item>
-        <el-form-item :label="t('deploy.username')" required>
-          <el-input
-            v-model="sshConfig.username"
-            :placeholder="t('deploy.inputUsername')"
-            :class="{ 'is-error': validationErrors.username }"
-            @input="validateForm"
-          />
-          <div v-if="validationErrors.username" class="el-form-item__error">
-            {{ validationErrors.username }}
-          </div>
-        </el-form-item>
-        <el-form-item :label="t('deploy.password')">
-          <el-input
-            v-model="sshConfig.password"
-            type="password"
-            show-password
-            :placeholder="t('deploy.passwordOptional')"
-            @input="validateForm"
-          />
-        </el-form-item>
-        <el-form-item :label="t('deploy.serverPath')">
-          <el-input v-model="sshConfig.serverPath" :placeholder="t('deploy.serverPathPlaceholder')" />
-        </el-form-item>
+        <Win11Divider />
 
-        <el-form-item>
-          <div class="connection-actions">
-            <el-button
-              :icon="isConnected ? Close : Connection"
-              :type="isConnected ? 'danger' : 'success'"
-              :loading="connecting"
-              :disabled="!isConnected && !isFormValid"
-              @click="handleConnect"
-            >
-              {{ isConnected ? t('deploy.disconnect') : t('deploy.connect') }}
-            </el-button>
-            <el-button
-              v-if="isConnected && !selectedServerName"
-              type="primary"
-              :icon="Plus"
-              :disabled="!isFormValid"
-              @click="showSaveDialog"
-            >
-              {{ t('deploy.saveCurrentServer') }}
-            </el-button>
-            <el-button
-              v-if="isConnected && selectedServerName"
-              type="success"
-              :icon="RefreshRight"
-              :disabled="!isFormValid"
-              @click="handleUpdateServer"
-            >
-              {{ t('deploy.updateCurrentServer') }}
-            </el-button>
-            <el-button type="info" @click="clearCurrentInput">
-              {{ t('deploy.clearCurrentInput') }}
-            </el-button>
-            <el-button
-              v-if="selectedServerName"
-              type="warning"
-              :icon="Edit"
-              @click="showRenameDialog"
-            >
-              {{ t('deploy.rename') }}
-            </el-button>
-            <el-button
-              v-if="selectedServerName"
-              type="danger"
-              :icon="Delete"
-              @click="handleDeleteServer"
-            >
-              {{ t('common.delete') }}
-            </el-button>
-          </div>
-        </el-form-item>
-      </el-form>
-    </el-card>
+        <DeployOpsPanel
+          :is-connected="isConnected"
+          :uploading-config="uploadingConfig"
+          :config-upload-status="configUploadStatus"
+          :starting-server="startingServer"
+          :stopping-server="stoppingServer"
+          :downloading-results="downloadingResults"
+          :server-running="serverRunning"
+          @upload="handleUploadConfig"
+          @start="handleStartServer"
+          @stop="handleStopServer"
+          @download="handleDownloadResults"
+        />
 
-    <el-card class="deploy-options" style="margin-top: 20px">
-      <template #header>
-        <span>{{ t('deploy.deployOperations') }}</span>
-      </template>
+        <Win11Divider />
 
-      <div class="deploy-buttons">
-        <el-button
-          type="primary"
-          :icon="Upload"
-          :loading="uploadingConfig"
-          :disabled="!isConnected || startingServer || stoppingServer || serverRunning"
-          @click="openUploadConfigConfirm"
-        >
-          {{ uploadingConfig ? configUploadStatus : t('deploy.uploadConfig') }}
-        </el-button>
-
-        <el-button
-          type="success"
-          :icon="Upload"
-          :loading="uploadingServer"
-          :disabled="!isConnected || startingServer || stoppingServer || serverRunning"
-          @click="handleUploadServer"
-        >
-          {{ uploadingServer ? serverUploadStatus : t('deploy.uploadServer') }}
-        </el-button>
-
-        <el-button
-          type="warning"
-          :icon="VideoPlay"
-          :loading="startingServer"
-          :disabled="!isConnected || serverRunning"
-          @click="handleStartServer"
-        >
-          {{ startingServer ? t('deploy.startingServer') : t('deploy.startServer') }}
-        </el-button>
-
-        <el-button
-          type="danger"
-          :icon="VideoPause"
-          :loading="stoppingServer"
-          :disabled="!isConnected || !serverRunning"
-          @click="handleStopServer"
-        >
-          {{ stoppingServer ? t('deploy.stoppingServer') : t('deploy.stopServer') }}
-        </el-button>
-
-        <el-button
-          type="info"
-          :icon="Download"
-          :loading="downloadingResults"
-          :disabled="!isConnected || startingServer || stoppingServer"
-          @click="handleDownloadResults"
-        >
-          {{ downloadingResults ? t('deploy.downloadingResults') : t('deploy.downloadResults') }}
-        </el-button>
+        <DeployLogPanel :logs="serverLogs" @clear="clearLogs" />
       </div>
+    </Win11Card>
 
-      <div v-if="currentOperation" class="operation-status" :class="operationStatusClass">
-        {{ currentOperation }}
-      </div>
-    </el-card>
+    <DeployServerFormDialog
+      v-model="serverFormVisible"
+      :mode="serverFormMode"
+      :initial-data="serverFormInitialData"
+      :test-connection="testConnection"
+      :on-save="handleServerFormSave"
+    />
 
-    <el-card v-if="deployLogs.length > 0" class="deploy-logs" style="margin-top: 20px">
-      <template #header>
-        <div class="logs-header">
-          <span>{{ t('deploy.operationLogs') }}</span>
-          <el-button link type="primary" size="small" @click="deployLogs = []">{{ t('deploy.clear') }}</el-button>
-        </div>
-      </template>
-      <div class="logs">
-        <div
-          v-for="(log, index) in deployLogs"
-          :key="index"
-          :class="['log-item', `log-${log.type}`]"
-        >
-          [{{ log.time }}] {{ log.message }}
-        </div>
-      </div>
-    </el-card>
-
-    <el-dialog v-model="saveDialogVisible" :title="t('deploy.saveServer')" width="500px">
-      <el-form :model="saveForm" label-width="80px">
-        <el-form-item :label="t('deploy.serverName')" required>
-          <el-input
-            v-model="saveForm.name"
-            :placeholder="t('deploy.inputServerName')"
-            maxlength="50"
-            show-word-limit
-          />
-        </el-form-item>
-        <el-form-item :label="t('deploy.description')">
-          <el-input
-            v-model="saveForm.description"
-            type="textarea"
-            :rows="2"
-            :placeholder="t('deploy.inputDescription')"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="saveDialogVisible = false">{{ t('common.cancel') }}</el-button>
-        <el-button type="primary" @click="handleSaveServer">{{ t('common.save') }}</el-button>
-      </template>
-    </el-dialog>
-
-    <el-dialog v-model="renameDialogVisible" :title="t('deploy.renameServer')" width="500px">
-      <el-form :model="renameForm" label-width="80px">
-        <el-form-item :label="t('deploy.newName')" required>
-          <el-input
-            v-model="renameForm.name"
-            :placeholder="t('deploy.inputNewName')"
-            maxlength="50"
-            show-word-limit
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="renameDialogVisible = false">{{ t('common.cancel') }}</el-button>
-        <el-button type="primary" @click="handleRenameServer">{{ t('common.confirm') }}</el-button>
-      </template>
-    </el-dialog>
-
-    <el-dialog
+    <DeployUploadConfirmDialog
       v-model="uploadConfirmVisible"
-      :title="t('deploy.uploadConfirmTitle')"
-      width="680px"
-      destroy-on-close
-      align-center
-      class="upload-config-confirm-dialog"
-    >
-      <el-alert
-        class="upload-confirm-alert"
-        type="info"
-        :closable="false"
-        show-icon
-      >
-        {{ t('deploy.uploadConfirmDescription') }}
-      </el-alert>
-
-      <div class="upload-summary-scroll">
-        <div class="upload-summary-hero">
-          <div class="hero-label">{{ t('form.track') }}</div>
-          <div class="hero-track">{{ trackDisplayName }}</div>
-          <div class="hero-tags">
-            <el-tag type="primary" effect="dark" round>{{ configs.settings.carGroup }}</el-tag>
-            <el-tag type="primary" effect="plain" round>
-              {{ t('form.maxCarSlots') }} · {{ configs.settings.maxCarSlots }}
-            </el-tag>
-            <el-tag type="success" effect="plain" round>
-              {{ t('form.maxConnections') }} · {{ configs.configuration.maxConnections }}
-            </el-tag>
-          </div>
-        </div>
-
-        <div class="upload-summary-panel">
-          <div class="panel-head">
-            <el-icon class="panel-head-icon"><Medal /></el-icon>
-            <span>{{ t('form.ratingRequirements') }}</span>
-          </div>
-          <div class="panel-body kv-grid kv-grid-auto">
-            <div class="kv kv-highlight">
-              <span class="kv-label">{{ t('form.trackMedalsRequirement') }}</span>
-              <span class="kv-value">{{ trackMedalsLabel }}</span>
-            </div>
-            <div class="kv kv-highlight">
-              <span class="kv-label">{{ t('form.safetyRatingRequirement') }}</span>
-              <span class="kv-value">{{ configs.settings.safetyRatingRequirement }}</span>
-            </div>
-            <div class="kv kv-highlight">
-              <span class="kv-label">{{ t('form.racecraftRatingRequirement') }}</span>
-              <span class="kv-value">{{ configs.settings.racecraftRatingRequirement }}</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="upload-summary-panel">
-          <div class="panel-head">
-            <el-icon class="panel-head-icon"><PartlyCloudy /></el-icon>
-            <span>{{ t('form.trackAndWeather') }}</span>
-          </div>
-          <div class="panel-body">
-            <div class="weather-track-line">
-              <el-icon><Location /></el-icon>
-              <span class="weather-track-name">{{ trackDisplayName }}</span>
-            </div>
-            <div class="kv-grid kv-grid-weather">
-              <div class="kv">
-                <span class="kv-label">{{ t('form.ambientTemp') }}</span>
-                <span class="kv-value">{{ configs.event.ambientTemp }}°C</span>
-              </div>
-              <div class="kv kv-wide">
-                <span class="kv-label">{{ t('form.cloudLevel') }}</span>
-                <span class="kv-value kv-value-muted">{{ cloudLevelSummary }}</span>
-              </div>
-              <div class="kv kv-wide">
-                <span class="kv-label">{{ t('form.rain') }}</span>
-                <span class="kv-value kv-value-muted">{{ rainSummary }}</span>
-              </div>
-              <div class="kv kv-wide">
-                <span class="kv-label">{{ t('form.weatherRandomness') }}</span>
-                <span class="kv-value kv-value-muted">{{ weatherRandomnessSummary }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="upload-summary-panel">
-          <div class="panel-head">
-            <el-icon class="panel-head-icon"><Calendar /></el-icon>
-            <span>{{ t('form.sessions') }}</span>
-          </div>
-          <div class="panel-body session-cards">
-            <div
-              v-for="(session, idx) in configs.event.sessions"
-              :key="idx"
-              class="session-card"
-              :data-session-type="session.sessionType"
-            >
-              <div class="session-card-title">{{ sessionBlockTitle(session.sessionType, idx) }}</div>
-              <div class="session-card-chips">
-                <span class="session-chip">{{ sessionTypeLabel(session.sessionType) }}</span>
-                <span class="session-chip">{{ dayOfWeekendLabel(session.dayOfWeekend) }}</span>
-                <span class="session-chip">{{ session.hourOfDay }}:00</span>
-                <span class="session-chip">{{ t('form.sessionDurationMinutes') }} {{ session.sessionDurationMinutes }}</span>
-                <span class="session-chip">×{{ session.timeMultiplier }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="upload-summary-panel upload-summary-panel--rules">
-          <div class="panel-head">
-            <el-icon class="panel-head-icon"><Operation /></el-icon>
-            <span>{{ t('nav.eventRules') }}</span>
-          </div>
-          <div class="panel-body">
-            <div class="rules-numbers">
-              <div class="kv">
-                <span class="kv-label">{{ t('form.pitWindowLengthSec') }}</span>
-                <span class="kv-value">{{ configs.eventRules.pitWindowLengthSec }}</span>
-              </div>
-              <div class="kv">
-                <span class="kv-label">{{ t('form.driverStintTimeSec') }}</span>
-                <span class="kv-value">{{ configs.eventRules.driverStintTimeSec }}</span>
-              </div>
-              <div class="kv">
-                <span class="kv-label">{{ t('form.mandatoryPitstopCount') }}</span>
-                <span class="kv-value">{{ configs.eventRules.mandatoryPitstopCount }}</span>
-              </div>
-              <div class="kv">
-                <span class="kv-label">{{ t('form.maxTotalDrivingTime') }}</span>
-                <span class="kv-value">{{ configs.eventRules.maxTotalDrivingTime }}</span>
-              </div>
-              <div class="kv">
-                <span class="kv-label">{{ t('form.maxDriversCount') }}</span>
-                <span class="kv-value">{{ configs.eventRules.maxDriversCount }}</span>
-              </div>
-              <div class="kv">
-                <span class="kv-label">{{ t('form.tyreSetCount') }}</span>
-                <span class="kv-value">{{ configs.eventRules.tyreSetCount }}</span>
-              </div>
-            </div>
-            <div class="rules-bool-title">{{ t('deploy.summaryRuleSwitches') }}</div>
-            <div class="rules-bool-grid">
-              <div class="rules-bool-row">
-                <span class="rules-bool-label">{{ t('form.isRefuellingAllowedInRace') }}</span>
-                <el-tag :type="boolTagType(configs.eventRules.isRefuellingAllowedInRace)" effect="light" round>
-                  {{ boolLabel(configs.eventRules.isRefuellingAllowedInRace) }}
-                </el-tag>
-              </div>
-              <div class="rules-bool-row">
-                <span class="rules-bool-label">{{ t('form.isMandatoryPitstopRefuellingRequired') }}</span>
-                <el-tag :type="boolTagType(configs.eventRules.isMandatoryPitstopRefuellingRequired)" effect="light" round>
-                  {{ boolLabel(configs.eventRules.isMandatoryPitstopRefuellingRequired) }}
-                </el-tag>
-              </div>
-              <div class="rules-bool-row">
-                <span class="rules-bool-label">{{ t('form.isMandatoryPitstopTyreChangeRequired') }}</span>
-                <el-tag :type="boolTagType(configs.eventRules.isMandatoryPitstopTyreChangeRequired)" effect="light" round>
-                  {{ boolLabel(configs.eventRules.isMandatoryPitstopTyreChangeRequired) }}
-                </el-tag>
-              </div>
-              <div class="rules-bool-row">
-                <span class="rules-bool-label">{{ t('form.isMandatoryPitstopSwapDriverRequired') }}</span>
-                <el-tag :type="boolTagType(configs.eventRules.isMandatoryPitstopSwapDriverRequired)" effect="light" round>
-                  {{ boolLabel(configs.eventRules.isMandatoryPitstopSwapDriverRequired) }}
-                </el-tag>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <template #footer>
-        <el-button @click="uploadConfirmVisible = false">{{ t('common.cancel') }}</el-button>
-        <el-button type="primary" :loading="uploadingConfig" @click="confirmUploadConfig">{{
-          t('deploy.confirmUpload')
-        }}</el-button>
-      </template>
-    </el-dialog>
+      :configs="props.configs"
+      :loading="uploadingConfig"
+      @confirm="handleUploadConfirm"
+      @cancel="uploadConfirmVisible = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, reactive } from 'vue'
-import {
-  Upload,
-  Connection,
-  Close,
-  Plus,
-  Edit,
-  Delete,
-  VideoPlay,
-  VideoPause,
-  Download,
-  RefreshRight,
-  Location,
-  Medal,
-  PartlyCloudy,
-  Calendar,
-  Operation
-} from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { invoke } from '@tauri-apps/api/core'
-import { open } from '@tauri-apps/plugin-dialog'
+import { ref, reactive, onMounted } from 'vue'
+import { t } from '../i18n'
+import { Win11Card, Win11Divider } from '../components/win11'
+import { useDeployConnection } from '../composables/useDeployConnection'
+import { useDeployServerProfiles } from '../composables/useDeployServerProfiles'
+import { useDeployOperations } from '../composables/useDeployOperations'
+import DeploySshPanel from '../components/deploy/DeploySshPanel.vue'
+import DeployOpsPanel from '../components/deploy/DeployOpsPanel.vue'
+import DeployLogPanel from '../components/deploy/DeployLogPanel.vue'
+import DeployServerFormDialog from '../components/deploy/DeployServerFormDialog.vue'
+import DeployUploadConfirmDialog from '../components/deploy/DeployUploadConfirmDialog.vue'
 import type { AllConfigs } from '../types/configuration'
-import type { ServerListItem } from '../types/server'
-import { t, currentLanguage } from '../i18n'
-import { getTrackOptions } from '../i18n/mappings'
-import {
-  getServers,
-  saveServer,
-  loadServer,
-  deleteServer,
-  renameServer,
-  createServerProfile
-} from '../utils/serverManager'
+import type { SshConfig } from '../types/server'
+import type { ServerFormData } from '../components/deploy/DeployServerFormDialog.vue'
+
+interface SshFormConfig extends SshConfig {
+  serverPath: string
+}
 
 const props = defineProps<{
   configs: AllConfigs
 }>()
 
-const uploadConfirmVisible = ref(false)
+const {
+  isConnected,
+  connecting,
+  connectionStatus,
+  validationErrors,
+  connect,
+  disconnect,
+  testConnection,
+} = useDeployConnection((msg, type) => addLog(msg, type))
 
-const trackDisplayName = computed(() => {
-  void currentLanguage.value
-  const id = props.configs.event.track
-  return getTrackOptions().find((o) => o.value === id)?.label ?? id
-})
+const {
+  serverList,
+  selectedServerName,
+  loading,
+  loadServerList,
+  selectServer,
+  saveCurrentServer,
+  updateServer,
+  deleteCurrentServer,
+} = useDeployServerProfiles()
 
-const trackMedalsLabel = computed(() => {
-  void currentLanguage.value
-  const v = props.configs.settings.trackMedalsRequirement
-  return v === 0 ? t('common.none') : String(v)
-})
+const {
+  uploadingConfig,
+  configUploadStatus,
+  startingServer,
+  stoppingServer,
+  downloadingResults,
+  serverRunning,
+  serverLogs,
+  clearLogs,
+  addLog,
+  deploy,
+  startServer,
+  stopServer,
+  checkServerStatus,
+  downloadResults,
+} = useDeployOperations()
 
-function cloudLevelText(value: number): string {
-  if (value === 0) return t('weather.clear')
-  if (value < 0.3) return t('weather.lightCloud')
-  if (value < 0.6) return t('weather.mediumCloud')
-  if (value < 0.8) return t('weather.heavyCloud')
-  return t('weather.heavyCloud')
-}
-
-function rainLevelText(value: number): string {
-  if (value === 0) return t('weather.clear')
-  if (value < 0.3) return t('weather.lightRain')
-  if (value < 0.6) return t('weather.mediumRain')
-  if (value < 0.8) return t('weather.heavyRain')
-  return t('weather.thunderstorm')
-}
-
-function weatherRandomnessText(value: number): string {
-  if (value === 0) return t('weatherRandomness.disabled')
-  if (value <= 2) return t('weatherRandomness.realistic')
-  if (value <= 5) return t('weatherRandomness.variable')
-  return t('weatherRandomness.chaotic')
-}
-
-const cloudLevelSummary = computed(() => {
-  void currentLanguage.value
-  const v = props.configs.event.cloudLevel
-  return `${v} (${cloudLevelText(v)})`
-})
-
-const rainSummary = computed(() => {
-  void currentLanguage.value
-  const v = props.configs.event.rain
-  return `${v} (${rainLevelText(v)})`
-})
-
-const weatherRandomnessSummary = computed(() => {
-  void currentLanguage.value
-  const v = props.configs.event.weatherRandomness
-  return `${v} (${weatherRandomnessText(v)})`
-})
-
-function sessionTypeLabel(type: string): string {
-  switch (type) {
-    case 'P':
-      return t('sessionTypes.practice')
-    case 'Q':
-      return t('sessionTypes.qualify')
-    case 'R':
-      return t('sessionTypes.race')
-    default:
-      return type
-  }
-}
-
-function dayOfWeekendLabel(n: number): string {
-  if (n === 1) return t('daysOfWeekend.friday')
-  if (n === 2) return t('daysOfWeekend.saturday')
-  if (n === 3) return t('daysOfWeekend.sunday')
-  return String(n)
-}
-
-function sessionBlockTitle(sessionType: string, index: number): string {
-  return `${sessionTypeLabel(sessionType)} — ${t('form.nthSession').replace('{n}', String(index + 1))}`
-}
-
-function boolLabel(v: boolean): string {
-  return v ? t('common.yes') : t('common.no')
-}
-
-function boolTagType(v: boolean): 'success' | 'info' {
-  return v ? 'success' : 'info'
-}
-
-function openUploadConfigConfirm() {
-  uploadConfirmVisible.value = true
-}
-
-async function confirmUploadConfig() {
-  uploadConfirmVisible.value = false
-  await runUploadConfig()
-}
-
-const sshConfig = ref({
+const sshConfig = reactive<SshFormConfig>({
   host: '',
   port: 22,
   username: '',
   password: '',
-  serverPath: 'C:/ACC_Server'
+  serverPath: 'C:\\ACC_Server',
+  authType: 'password',
 })
 
-const validationErrors = reactive({
-  host: '',
-  port: '',
-  username: ''
+const serverFormVisible = ref(false)
+const serverFormMode = ref<'create' | 'edit'>('create')
+const serverFormInitialData = ref<ServerFormData | undefined>(undefined)
+const uploadConfirmVisible = ref(false)
+
+onMounted(async () => {
+  await loadServerList()
 })
-
-function validateForm() {
-  validationErrors.host = ''
-  validationErrors.port = ''
-  validationErrors.username = ''
-
-  if (!sshConfig.value.host || sshConfig.value.host.trim() === '') {
-    validationErrors.host = t('deploy.pleaseInputServerAddress')
-  } else {
-    validationErrors.host = ''
-  }
-
-  if (!sshConfig.value.port || sshConfig.value.port < 1 || sshConfig.value.port > 65535) {
-    validationErrors.port = t('deploy.pleaseInputValidPort')
-  } else {
-    validationErrors.port = ''
-  }
-
-  if (!sshConfig.value.username || sshConfig.value.username.trim() === '') {
-    validationErrors.username = t('deploy.pleaseInputUsername')
-  } else {
-    validationErrors.username = ''
-  }
-}
-
-const isFormValid = computed(() => {
-  return (
-    sshConfig.value.host.trim() !== '' &&
-    sshConfig.value.port >= 1 &&
-    sshConfig.value.port <= 65535 &&
-    sshConfig.value.username.trim() !== ''
-  )
-})
-
-const sessionPassword = ref('')
-
-function getEffectivePassword(): string {
-  return (sshConfig.value.password || '').trim() || sessionPassword.value
-}
-
-function buildSshInvokeConfig() {
-  return {
-    host: sshConfig.value.host,
-    port: sshConfig.value.port,
-    username: sshConfig.value.username,
-    auth_type: 'password',
-    password: getEffectivePassword(),
-    private_key: null
-  }
-}
-
-const uploadingConfig = ref(false)
-const configUploadStatus = ref(t('common.loading'))
-const uploadingServer = ref(false)
-const serverUploadStatus = ref(t('common.loading'))
-const startingServer = ref(false)
-const stoppingServer = ref(false)
-const serverRunning = ref(false)
-const downloadingResults = ref(false)
-const currentOperation = ref('')
-const operationType = ref<'success' | 'error' | 'info'>('info')
-
-const operationStatusClass = computed(() => `status-${operationType.value}`)
-
-const connecting = ref(false)
-const isConnected = ref(false)
-const connectionStatus = ref({
-  connected: false,
-  host: '',
-  username: ''
-})
-const deployLogs = ref<Array<{ type: string; message: string; time: string }>>([])
-
-const serverList = ref<ServerListItem[]>([])
-const selectedServerName = ref('')
-
-const saveDialogVisible = ref(false)
-const saveForm = ref({
-  name: '',
-  description: ''
-})
-
-const renameDialogVisible = ref(false)
-const renameForm = ref({
-  name: ''
-})
-
-function setOperationStatus(message: string, type: 'success' | 'error' | 'info') {
-  currentOperation.value = message
-  operationType.value = type
-}
-
-function clearOperationStatus() {
-  currentOperation.value = ''
-}
-
-function addLog(type: 'info' | 'success' | 'error', message: string) {
-  const now = new Date()
-  const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`
-  deployLogs.value.push({ type, message, time })
-}
-
-async function fetchConnectionStatus() {
-  try {
-    const result = await invoke<{ connected: boolean; host: string; username: string }>('get_connection_status')
-    isConnected.value = result.connected
-    connectionStatus.value = result
-  } catch (error) {
-    console.error('获取连接状态失败:', error)
-  }
-}
-
-async function loadServerList() {
-  try {
-    serverList.value = await getServers()
-  } catch (error) {
-    console.error('加载服务器列表失败:', error)
-  }
-}
-
-function showSaveDialog() {
-  if (selectedServerName.value) {
-    const server = serverList.value.find(s => s.name === selectedServerName.value)
-    saveForm.value.name = selectedServerName.value
-    saveForm.value.description = server?.description || ''
-  } else {
-    saveForm.value.name = ''
-    saveForm.value.description = ''
-  }
-  saveDialogVisible.value = true
-}
-
-async function handleSaveServer() {
-  const name = saveForm.value.name.trim()
-
-  if (!name) {
-    ElMessage.warning(t('deploy.pleaseInputServerName'))
-    return
-  }
-
-  if (name.length > 50) {
-    ElMessage.warning(t('deploy.serverNameTooLong'))
-    return
-  }
-
-  const exists = serverList.value.some(s => s.name === name)
-  if (exists) {
-    try {
-      await ElMessageBox.confirm(
-        t('deploy.confirmOverwriteServer').replace('{name}', name),
-        t('deploy.confirmOverwrite'),
-        {
-          confirmButtonText: t('common.confirm'),
-          cancelButtonText: t('common.cancel'),
-          type: 'warning'
-        }
-      )
-    } catch {
-      return
-    }
-  }
-
-  try {
-    const profile = createServerProfile(
-      name,
-      {
-        host: sshConfig.value.host,
-        port: sshConfig.value.port,
-        username: sshConfig.value.username,
-        password: sshConfig.value.password
-      },
-      sshConfig.value.serverPath,
-      saveForm.value.description.trim() || undefined
-    )
-
-    await saveServer(profile)
-    ElMessage.success(t('deploy.serverSaved'))
-    saveDialogVisible.value = false
-    selectedServerName.value = name
-    await loadServerList()
-  } catch (error) {
-    ElMessage.error(t('deploy.saveServerFailed') + ': ' + (error as Error).message)
-  }
-}
-
-async function handleUpdateServer() {
-  if (!selectedServerName.value) return
-
-  const existing = serverList.value.find(s => s.name === selectedServerName.value)
-
-  try {
-    const profile = createServerProfile(
-      selectedServerName.value,
-      {
-        host: sshConfig.value.host,
-        port: sshConfig.value.port,
-        username: sshConfig.value.username,
-        password: sshConfig.value.password
-      },
-      sshConfig.value.serverPath,
-      existing?.description
-    )
-
-    await saveServer(profile)
-    ElMessage.success(t('deploy.serverUpdated'))
-    await loadServerList()
-  } catch (error) {
-    ElMessage.error(t('deploy.updateServerFailed') + ': ' + (error as Error).message)
-  }
-}
-
-function clearCurrentInput() {
-  selectedServerName.value = ''
-  sshConfig.value.host = ''
-  sshConfig.value.port = 22
-  sshConfig.value.username = ''
-  sshConfig.value.password = ''
-  sshConfig.value.serverPath = 'C:/ACC_Server'
-  sessionPassword.value = ''
-  validateForm()
-}
 
 async function handleServerSelect(name: string) {
   if (!name) {
+    selectedServerName.value = ''
+    sshConfig.host = ''
+    sshConfig.port = 22
+    sshConfig.username = ''
+    sshConfig.password = ''
+    sshConfig.serverPath = 'C:\\ACC_Server'
     return
   }
-
-  try {
-    const server = await loadServer(name)
-    sshConfig.value.host = server.config.host
-    sshConfig.value.port = server.config.port
-    sshConfig.value.username = server.config.username
-    sshConfig.value.password = server.config.password || ''
-    sshConfig.value.serverPath = server.serverPath || 'C:/ACC_Server'
-    validateForm()
-    ElMessage.success(t('deploy.serverLoaded') + ': ' + name)
-  } catch (error) {
-    ElMessage.error(t('deploy.loadServerFailed') + ': ' + (error as Error).message)
+  const profile = await selectServer(name)
+  if (profile) {
+    sshConfig.host = profile.config.host
+    sshConfig.port = profile.config.port
+    sshConfig.username = profile.config.username
+    sshConfig.password = profile.config.password || ''
+    sshConfig.serverPath = profile.serverPath || 'C:\\ACC_Server'
+    sshConfig.authType = profile.config.authType || 'password'
   }
 }
 
-function showRenameDialog() {
-  if (!selectedServerName.value) return
-  renameForm.value.name = selectedServerName.value
-  renameDialogVisible.value = true
+async function handleConnect(config: { host: string; port: number; username: string; password: string }) {
+  const ok = await connect(config)
+  if (!ok) return
+  sshConfig.host = config.host
+  sshConfig.port = config.port
+  sshConfig.username = config.username
+  sshConfig.password = config.password
+  const running = await checkServerStatus(config)
+  addLog(running ? t('deploy.accServerDetected') : t('deploy.accServerNotDetected'), running ? 'info' : 'warning')
 }
 
-async function handleRenameServer() {
-  const newName = renameForm.value.name.trim()
+async function handleDisconnect() {
+  await disconnect()
+}
 
-  if (!newName) {
-    ElMessage.warning(t('deploy.pleaseInputNewName'))
-    return
+function showCreateDialog() {
+  serverFormMode.value = 'create'
+  serverFormInitialData.value = undefined
+  serverFormVisible.value = true
+}
+
+function showEditDialog() {
+  serverFormMode.value = 'edit'
+  serverFormInitialData.value = {
+    name: selectedServerName.value,
+    host: sshConfig.host,
+    port: sshConfig.port,
+    username: sshConfig.username,
+    password: sshConfig.password || '',
+    serverPath: sshConfig.serverPath,
+    description: '',
   }
+  serverFormVisible.value = true
+}
 
-  if (newName.length > 50) {
-    ElMessage.warning(t('deploy.serverNameTooLong'))
-    return
+async function handleServerFormSave(data: ServerFormData) {
+  const config: SshConfig = {
+    host: data.host,
+    port: data.port,
+    username: data.username,
+    password: data.password,
+    authType: 'password',
   }
-
-  try {
-    await renameServer(selectedServerName.value, newName)
-    ElMessage.success(t('deploy.serverRenamed'))
-    renameDialogVisible.value = false
-    selectedServerName.value = newName
+  if (serverFormMode.value === 'create') {
+    await saveCurrentServer(data.name, config, data.serverPath, data.description || undefined)
     await loadServerList()
-  } catch (error) {
-    ElMessage.error(t('deploy.renameServerFailed') + ': ' + (error as Error).message)
+    await selectServer(data.name)
+    if (data.name) {
+      sshConfig.host = data.host
+      sshConfig.port = data.port
+      sshConfig.username = data.username
+      sshConfig.password = data.password
+      sshConfig.serverPath = data.serverPath
+    }
+  } else {
+    await updateServer(data.name, config, data.serverPath, data.description || undefined)
+    await selectServer(data.name)
+    sshConfig.host = data.host
+    sshConfig.port = data.port
+    sshConfig.username = data.username
+    sshConfig.password = data.password
+    sshConfig.serverPath = data.serverPath
   }
 }
 
 async function handleDeleteServer() {
-  if (!selectedServerName.value) return
-
-  try {
-    await ElMessageBox.confirm(
-      t('deploy.confirmDeleteServer').replace('{name}', selectedServerName.value),
-      t('deploy.confirmDelete'),
-      {
-        confirmButtonText: t('common.confirm'),
-        cancelButtonText: t('common.cancel'),
-        type: 'warning'
-      }
-    )
-
-    await deleteServer(selectedServerName.value)
-    ElMessage.success(t('deploy.serverDeleted'))
-    selectedServerName.value = ''
-    sshConfig.value.host = ''
-    sshConfig.value.port = 22
-    sshConfig.value.username = ''
-    sshConfig.value.password = ''
-    sshConfig.value.serverPath = 'C:/ACC_Server'
-    sessionPassword.value = ''
-    validateForm()
-    await loadServerList()
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error(t('deploy.deleteServerFailed') + ': ' + (error as Error).message)
-    }
-  }
+  await deleteCurrentServer(selectedServerName.value)
+  sshConfig.host = ''
+  sshConfig.port = 22
+  sshConfig.username = ''
+  sshConfig.password = ''
+  sshConfig.serverPath = 'C:\\ACC_Server'
 }
 
-async function checkServerRunning() {
-  try {
-    const sshConfigData = buildSshInvokeConfig()
-    const result = await invoke<{ success: boolean; running: boolean; error?: string }>(
-      'check_acc_server_status_cmd',
-      { sshConfig: sshConfigData }
-    )
-    serverRunning.value = result.running
-    if (result.running) {
-      addLog('info', t('deploy.accServerDetected'))
-    } else {
-      addLog('info', t('deploy.accServerNotDetected'))
-    }
-  } catch (error) {
-    addLog('error', t('deploy.checkServerStatusFailed') + ': ' + (error as Error).message)
-  }
+async function handleUploadConfig() {
+  uploadConfirmVisible.value = true
 }
 
-async function handleConnect() {
-  if (isConnected.value) {
-    try {
-      connecting.value = true
-      addLog('info', t('deploy.disconnecting'))
-      await invoke('disconnect')
-      isConnected.value = false
-      serverRunning.value = false
-      connectionStatus.value = { connected: false, host: '', username: '' }
-      sessionPassword.value = ''
-      ElMessage.success(t('deploy.disconnected'))
-    } catch (error) {
-      addLog('error', t('deploy.disconnectFailed') + ': ' + (error as Error).message)
-      ElMessage.error(t('deploy.disconnectFailed'))
-    } finally {
-      connecting.value = false
-    }
-  } else {
-    if (!getEffectivePassword()) {
-      try {
-        const { value } = await ElMessageBox.prompt(
-          t('deploy.enterPasswordPrompt'),
-          t('deploy.enterPassword'),
-          {
-            confirmButtonText: t('common.confirm'),
-            cancelButtonText: t('common.cancel'),
-            inputType: 'password',
-            inputPattern: /.+/,
-            inputErrorMessage: t('deploy.pleaseInputPassword')
-          }
-        )
-        sessionPassword.value = value
-      } catch {
-        return
-      }
-    }
-
-    try {
-      connecting.value = true
-      addLog('info', t('deploy.connecting'))
-
-      const config = buildSshInvokeConfig()
-
-      const result = await invoke<{ success: boolean; error?: string }>('connect', { config })
-
-      if (result.success) {
-        isConnected.value = true
-        connectionStatus.value = {
-          connected: true,
-          host: sshConfig.value.host,
-          username: sshConfig.value.username
-        }
-        addLog('success', t('deploy.sshConnected') + `: ${sshConfig.value.host}`)
-        ElMessage.success(t('deploy.connected'))
-        await checkServerRunning()
-      } else {
-        addLog('error', t('deploy.connectFailed') + ': ' + result.error)
-        ElMessage.error(t('deploy.connectFailed') + ': ' + result.error)
-      }
-    } catch (error) {
-      addLog('error', t('deploy.connectionError') + ': ' + (error as Error).message)
-      ElMessage.error(t('deploy.connectFailed'))
-    } finally {
-      connecting.value = false
-    }
-  }
-}
-
-onMounted(() => {
-  fetchConnectionStatus()
-  loadServerList()
-})
-
-async function runUploadConfig() {
-  try {
-    uploadingConfig.value = true
-    configUploadStatus.value = t('deploy.deletingOldConfig')
-    clearOperationStatus()
-    setOperationStatus(t('deploy.deletingOldConfigFiles'), 'info')
-    addLog('info', t('deploy.startUploadConfig'))
-
-    const sshConfigData = buildSshInvokeConfig()
-
-    const deleteResult = await invoke<{ success: boolean; error?: string }>('delete_config_folder', {
-      config: sshConfigData,
-      serverPath: sshConfig.value.serverPath
-    })
-
-    if (!deleteResult.success) {
-      addLog('error', t('deploy.configDeleted') + ': ' + deleteResult.error)
-      setOperationStatus(t('deploy.configDeleted') + ': ' + deleteResult.error, 'error')
-      ElMessage.error(t('deploy.configDeleted') + ': ' + deleteResult.error)
-      return
-    }
-
-    configUploadStatus.value = t('deploy.uploadingConfig')
-    setOperationStatus(t('deploy.uploadingConfig'), 'info')
-    addLog('info', t('deploy.oldConfigDeleted'))
-
-    const deployResult = await invoke<{ success: boolean; error?: string }>('deploy', {
-      sshConfig: sshConfigData,
-      options: {
-        server_path: sshConfig.value.serverPath,
-        download_server: false,
-        server_download_url: null,
-        start_server: false,
-        download_results: false
-      },
-      configs: props.configs
-    })
-
-    if (deployResult.success) {
-      addLog('success', t('deploy.configUploadSuccess'))
-      setOperationStatus(t('deploy.configUploadSuccess'), 'success')
-      ElMessage.success(t('deploy.configUploadSuccess').replace('!', ''))
-    } else {
-      addLog('error', t('deploy.configUploadFailedMsg') + ': ' + deployResult.error)
-      setOperationStatus(t('deploy.configUploadFailedMsg') + ': ' + deployResult.error, 'error')
-      ElMessage.error(t('deploy.configUploadFailedMsg') + ': ' + deployResult.error)
-    }
-  } catch (error) {
-    addLog('error', t('deploy.configUploadError') + ': ' + (error as Error).message)
-    setOperationStatus(t('deploy.configUploadError') + ': ' + (error as Error).message, 'error')
-    ElMessage.error(t('deploy.configUploadFailedMsg'))
-  } finally {
-    uploadingConfig.value = false
-    configUploadStatus.value = t('common.loading')
-  }
-}
-
-async function handleUploadServer() {
-  try {
-    uploadingServer.value = true
-    serverUploadStatus.value = t('common.loading')
-    clearOperationStatus()
-    setOperationStatus(t('deploy.uploadingServer'), 'info')
-    addLog('info', t('deploy.startUploadServer'))
-
-    const sshConfigData = buildSshInvokeConfig()
-    let exeDir = ''
-    try {
-      exeDir = await invoke<string>('get_app_exe_dir')
-    } catch {
-      exeDir = ''
-    }
-
-    const defaultZipPath = exeDir ? `${exeDir.replace(/\\/g, '/')}/acc-server.zip` : 'acc-server.zip'
-
-    const uploadWithPath = async (localZipPath: string) =>
-      invoke<{ success: boolean; error?: string; message?: string }>('upload_acc_server_local_cmd', {
-        sshConfig: sshConfigData,
-        serverPath: sshConfig.value.serverPath,
-        localZipPath
-      })
-
-    let result = await uploadWithPath(defaultZipPath)
-    if (!result.success && result.error?.includes('读取本地文件失败')) {
-      const selected = await open({
-        title: t('deploy.selectServerZip'),
-        multiple: false,
-        filters: [{ name: 'ZIP', extensions: ['zip'] }]
-      })
-
-      if (!selected || Array.isArray(selected)) {
-        ElMessage.warning(t('deploy.pleaseSelectServerZip'))
-        return
-      }
-
-      result = await uploadWithPath(selected)
-    }
-
-    if (result.success) {
-      addLog('success', t('deploy.serverUploadSuccess') + ' ' + (result.message || ''))
-      setOperationStatus(t('deploy.serverUploadSuccess'), 'success')
-      ElMessage.success(t('deploy.serverUploadSuccess').replace('!', ''))
-    } else {
-      addLog('error', t('deploy.serverUploadFailedMsg') + ': ' + result.error)
-      setOperationStatus(t('deploy.serverUploadFailedMsg') + ': ' + result.error, 'error')
-      ElMessage.error(t('deploy.serverUploadFailedMsg') + ': ' + result.error)
-    }
-  } catch (error) {
-    addLog('error', t('deploy.serverUploadError') + ': ' + (error as Error).message)
-    setOperationStatus(t('deploy.serverUploadError') + ': ' + (error as Error).message, 'error')
-    ElMessage.error(t('deploy.serverUploadFailedMsg'))
-  } finally {
-    uploadingServer.value = false
-    serverUploadStatus.value = t('common.loading')
-  }
+async function handleUploadConfirm() {
+  uploadConfirmVisible.value = false
+  const serverPath = sshConfig.serverPath || 'C:\\ACC_Server'
+  await deploy(
+    { host: sshConfig.host, port: sshConfig.port, username: sshConfig.username, password: sshConfig.password },
+    serverPath,
+    props.configs
+  )
 }
 
 async function handleStartServer() {
-  try {
-    startingServer.value = true
-    clearOperationStatus()
-    setOperationStatus(t('deploy.startingServer'), 'info')
-    addLog('info', t('deploy.startingServer'))
-
-    const sshConfigData = buildSshInvokeConfig()
-
-    const result = await invoke<{ success: boolean; error?: string }>('start_acc_server_cmd', {
-      sshConfig: sshConfigData,
-      serverPath: sshConfig.value.serverPath
-    })
-
-    if (result.success) {
-      serverRunning.value = true
-      addLog('success', t('deploy.serverStartSuccess'))
-      setOperationStatus(t('deploy.serverStartSuccess'), 'success')
-      ElMessage.success(t('deploy.serverStartSuccess').replace('!', ''))
-    } else {
-      addLog('error', t('deploy.serverStartFailedMsg') + ': ' + result.error)
-      setOperationStatus(t('deploy.serverStartFailedMsg') + ': ' + result.error, 'error')
-      ElMessage.error(t('deploy.serverStartFailedMsg') + ': ' + result.error)
-    }
-  } catch (error) {
-    addLog('error', t('deploy.serverStartError') + ': ' + (error as Error).message)
-    setOperationStatus(t('deploy.serverStartError') + ': ' + (error as Error).message, 'error')
-    ElMessage.error(t('deploy.serverStartFailedMsg'))
-  } finally {
-    startingServer.value = false
-  }
+  const serverPath = sshConfig.serverPath || 'C:\\ACC_Server'
+  await startServer(
+    { host: sshConfig.host, port: sshConfig.port, username: sshConfig.username, password: sshConfig.password },
+    serverPath
+  )
 }
 
 async function handleStopServer() {
-  try {
-    stoppingServer.value = true
-    clearOperationStatus()
-    setOperationStatus(t('deploy.stoppingServer'), 'info')
-    addLog('info', t('deploy.stoppingServer'))
-
-    const sshConfigData = buildSshInvokeConfig()
-
-    const result = await invoke<{ success: boolean; error?: string; message?: string }>('stop_acc_server_cmd', {
-      sshConfig: sshConfigData
-    })
-
-    if (result.success) {
-      serverRunning.value = false
-      addLog('success', t('deploy.serverStopSuccess'))
-      setOperationStatus(t('deploy.serverStopSuccess'), 'success')
-      ElMessage.success(t('deploy.serverStopped'))
-    } else {
-      addLog('error', t('deploy.serverStopFailedMsg') + ': ' + result.error)
-      setOperationStatus(t('deploy.serverStopFailedMsg') + ': ' + result.error, 'error')
-      ElMessage.error(t('deploy.serverStopFailedMsg') + ': ' + result.error)
-    }
-  } catch (error) {
-    addLog('error', t('deploy.serverStopError') + ': ' + (error as Error).message)
-    setOperationStatus(t('deploy.serverStopError') + ': ' + (error as Error).message, 'error')
-    ElMessage.error(t('deploy.serverStopFailedMsg'))
-  } finally {
-    stoppingServer.value = false
-  }
+  const serverPath = sshConfig.serverPath || 'C:\\ACC_Server'
+  await stopServer(
+    { host: sshConfig.host, port: sshConfig.port, username: sshConfig.username, password: sshConfig.password },
+    serverPath
+  )
 }
 
 async function handleDownloadResults() {
-  try {
-    downloadingResults.value = true
-    clearOperationStatus()
-    setOperationStatus(t('deploy.downloadingResults'), 'info')
-    addLog('info', t('deploy.downloadingResults'))
-
-    const sshConfigData = buildSshInvokeConfig()
-
-    // 获取软件根目录，将结果下载到根目录下的 results 文件夹
-    let exeDir: string
-    try {
-      exeDir = await invoke<string>('get_app_exe_dir')
-    } catch {
-      exeDir = 'C:/ACC_Results_fallback'
-    }
-    const localResultsPath = exeDir.replace(/\\/g, '/') + '/results'
-
-    addLog('info', `下载目标路径: ${localResultsPath}`)
-
-    const result = await invoke<{ success: boolean; error?: string; files?: string[] }>('download_results_filtered_cmd', {
-      sshConfig: sshConfigData,
-      serverPath: sshConfig.value.serverPath,
-      localPath: localResultsPath
-    })
-
-    if (result.success) {
-      const files = result.files || []
-      addLog('success', t('deploy.downloadSuccess').replace('{count}', files.length.toString()))
-      setOperationStatus(t('deploy.downloadSuccess').replace('{count}', files.length.toString()) + ` -> ${localResultsPath}`, 'success')
-      ElMessage.success(t('deploy.downloadSuccess').replace('{count}', files.length.toString()))
-    } else {
-      addLog('error', t('deploy.downloadFailed') + ': ' + result.error)
-      setOperationStatus(t('deploy.downloadFailed') + ': ' + result.error, 'error')
-      ElMessage.error(t('deploy.downloadFailed') + ': ' + result.error)
-    }
-  } catch (error) {
-    addLog('error', t('deploy.downloadResultsError') + ': ' + (error as Error).message)
-    setOperationStatus(t('deploy.downloadResultsError') + ': ' + (error as Error).message, 'error')
-    ElMessage.error(t('deploy.downloadResultsError'))
-  } finally {
-    downloadingResults.value = false
-  }
+  const serverPath = sshConfig.serverPath || 'C:\\ACC_Server'
+  await downloadResults(
+    { host: sshConfig.host, port: sshConfig.port, username: sshConfig.username, password: sshConfig.password },
+    serverPath
+  )
 }
 </script>
 
 <style scoped>
 .deploy-form {
-  padding: 20px;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.connection-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.server-select-footer {
-  padding: 8px 0;
-  text-align: center;
-}
-
-.deploy-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.deploy-buttons .el-button {
-  min-width: 160px;
-}
-
-.operation-status {
-  padding: 12px 16px;
-  border-radius: 4px;
-  font-size: 14px;
-  margin-top: 12px;
-}
-
-.status-success {
-  background-color: #f0f9eb;
-  color: #67c23a;
-  border: 1px solid #e1f3d8;
-}
-
-.status-error {
-  background-color: #fef0f0;
-  color: #f56c6c;
-  border: 1px solid #fde2e2;
-}
-
-.status-info {
-  background-color: #f4f4f5;
-  color: #909399;
-  border: 1px solid #e9e9eb;
-}
-
-.logs-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.logs {
-  max-height: 300px;
-  overflow-y: auto;
-  background-color: #f5f7fa;
-  padding: 12px;
-  border-radius: 4px;
-  font-family: 'Courier New', monospace;
-  font-size: 13px;
-}
-
-.log-item {
-  margin-bottom: 4px;
-  word-break: break-all;
-}
-
-.log-info {
-  color: #606266;
-}
-
-.log-success {
-  color: #67c23a;
-}
-
-.log-error {
-  color: #f56c6c;
-}
-
-:deep(.el-form-item.is-error .el-input__wrapper),
-:deep(.el-form-item.is-error .el-input-number) {
-  box-shadow: 0 0 0 1px #f56c6c inset;
-}
-
-:deep(.el-form-item__error) {
-  color: #f56c6c;
-  font-size: 12px;
-  line-height: 1;
-  padding-top: 4px;
-  position: absolute;
-  top: 100%;
-  left: 0;
-}
-
-.upload-confirm-alert {
-  flex-shrink: 0;
-  margin-bottom: 16px;
-}
-
-.upload-confirm-alert :deep(.el-alert) {
-  align-items: flex-start;
-}
-
-.upload-confirm-alert :deep(.el-alert__content) {
-  flex: 1;
-  min-width: 0;
-  line-height: 1.55;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-}
-
-.upload-summary-scroll {
-  flex: 1;
-  min-height: 120px;
-  overflow-x: hidden;
-  overflow-y: auto;
-  padding-right: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  -webkit-overflow-scrolling: touch;
-}
-
-.upload-summary-hero {
-  padding: 18px 20px;
-  border-radius: 12px;
-  background: linear-gradient(
-    135deg,
-    var(--el-color-primary-light-9) 0%,
-    var(--el-fill-color-blank) 48%,
-    var(--el-fill-color-light) 100%
-  );
-  border: 1px solid var(--el-color-primary-light-7);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-}
-
-.hero-label {
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--el-color-primary);
-  opacity: 0.85;
-  margin-bottom: 6px;
-}
-
-.hero-track {
-  font-size: 22px;
-  font-weight: 700;
-  line-height: 1.25;
-  color: var(--el-text-color-primary);
-  margin-bottom: 14px;
-  word-break: break-word;
-}
-
-.hero-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.upload-summary-panel {
-  border-radius: 10px;
-  border: 1px solid var(--el-border-color-lighter);
-  background: var(--el-fill-color-blank);
-  overflow: visible;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-}
-
-.upload-summary-panel .panel-head {
-  border-radius: 10px 10px 0 0;
-}
-
-.upload-summary-panel--rules .rules-numbers {
-  margin-bottom: 4px;
-}
-
-.panel-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-  background: var(--el-fill-color-light);
-  border-bottom: 1px solid var(--el-border-color-lighter);
-}
-
-.panel-head-icon {
-  font-size: 18px;
-  color: var(--el-color-primary);
-}
-
-.panel-body {
-  padding: 14px 16px 16px;
-}
-
-.kv-grid {
-  display: grid;
-  gap: 12px 16px;
-}
-
-.kv-grid-weather {
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-}
-
-.kv-grid-auto {
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-}
-
-.kv {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-  overflow: visible;
-}
-
-.kv-wide {
-  grid-column: 1 / -1;
-}
-
-.kv-label {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-  line-height: 1.35;
-  white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-}
-
-.kv-value {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-  line-height: 1.3;
-  word-break: break-word;
-}
-
-.kv-value-muted {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--el-text-color-regular);
-}
-
-.kv-highlight {
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: var(--el-fill-color-light);
-  border: 1px solid var(--el-border-color-lighter);
-}
-
-.kv-highlight .kv-value {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--el-color-primary);
-}
-
-.weather-track-line {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin-bottom: 14px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: var(--el-fill-color-light);
-  color: var(--el-color-primary);
-}
-
-.weather-track-line .el-icon {
-  font-size: 18px;
-}
-
-.weather-track-name {
-  flex: 1;
-  min-width: 0;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-  line-height: 1.45;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-}
-
-.session-cards {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.session-card {
-  padding: 12px 14px 12px 16px;
-  border-radius: 8px;
-  background: var(--el-fill-color-light);
-  border: 1px solid var(--el-border-color-lighter);
-  border-left-width: 4px;
-  border-left-style: solid;
-}
-
-.session-card[data-session-type='P'] {
-  border-left-color: var(--el-color-info);
-}
-
-.session-card[data-session-type='Q'] {
-  border-left-color: var(--el-color-warning);
-}
-
-.session-card[data-session-type='R'] {
-  border-left-color: var(--el-color-danger);
-}
-
-.session-card-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-  margin-bottom: 8px;
-}
-
-.session-card-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.session-chip {
-  display: inline-block;
-  padding: 3px 10px;
-  font-size: 12px;
-  border-radius: 999px;
-  background: var(--el-fill-color-blank);
-  color: var(--el-text-color-regular);
-  border: 1px solid var(--el-border-color-lighter);
-}
-
-.rules-numbers {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px 14px;
-}
-
-.rules-bool-title {
-  margin-top: 16px;
-  margin-bottom: 10px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--el-text-color-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.rules-bool-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.rules-bool-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: var(--el-fill-color-light);
-}
-
-.rules-bool-label {
-  font-size: 13px;
-  color: var(--el-text-color-regular);
-  line-height: 1.45;
-  flex: 1;
-  min-width: 0;
-  white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-}
-
-.rules-bool-row :deep(.el-tag) {
-  flex-shrink: 0;
-  align-self: center;
-}
-
-:deep(.upload-config-confirm-dialog .el-dialog__header) {
-  padding-bottom: 8px;
-  margin-right: 0;
-}
-
-:deep(.upload-config-confirm-dialog .el-dialog__title) {
-  font-size: 17px;
-  font-weight: 700;
-}
-
-:deep(.upload-config-confirm-dialog.el-dialog) {
-  max-height: calc(100vh - 32px);
-  display: flex;
-  flex-direction: column;
-  margin-top: 16px !important;
-  margin-bottom: 16px !important;
-}
-
-:deep(.upload-config-confirm-dialog .el-dialog__body) {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.hero-tags :deep(.el-tag) {
-  height: auto;
-  min-height: 24px;
-  white-space: normal;
-  word-break: break-word;
-  padding-top: 4px;
-  padding-bottom: 4px;
-  line-height: 1.35;
-  max-width: 100%;
+  @apply p-6;
 }
 </style>

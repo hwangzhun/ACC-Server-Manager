@@ -1,140 +1,237 @@
 <template>
   <div class="event-form">
-    <!-- 赛道和天气 -->
-    <el-card class="section-card">
-      <template #header>
-        <h3>{{ t('form.trackAndWeather') }}</h3>
-      </template>
-      <el-form :model="event" label-width="180px">
-        <el-form-item :label="t('form.track')">
-          <el-select v-model="event.track" :placeholder="t('common.pleaseSelect')" filterable>
-            <el-option v-for="track in trackOptions" :key="track.value" :label="track.label" :value="track.value" />
-          </el-select>
-          <FieldDescription config-name="event" field-name="track" />
-        </el-form-item>
-        <el-form-item :label="t('form.ambientTemp')">
-          <el-input-number v-model="event.ambientTemp" :min="-20" :max="40" />
-          <FieldDescription config-name="event" field-name="ambientTemp" />
-        </el-form-item>
-        <el-form-item :label="t('form.cloudLevel')">
-          <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
-            <el-slider v-model="event.cloudLevel" :min="0" :max="1" :step="0.1" :format-tooltip="formatCloudLevel" style="flex: 1;" />
-            <span style="min-width: 40px; text-align: right;">{{ event.cloudLevel }}</span>
+    <Win11Card>
+      <template #title>
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-md bg-win11-accent/10 flex items-center justify-center">
+            <svg class="w-5 h-5 text-win11-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+            </svg>
           </div>
-          <FieldDescription config-name="event" field-name="cloudLevel" />
-        </el-form-item>
-        <el-form-item :label="t('form.rain')">
-          <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
-            <el-slider v-model="event.rain" :min="0" :max="1" :step="0.1" :format-tooltip="formatRainLevel" style="flex: 1;" />
-            <span style="min-width: 40px; text-align: right;">{{ event.rain }}</span>
+          <div>
+            <h3 class="text-base font-semibold text-win11-text m-0">{{ t('form.trackAndWeather') }}</h3>
+            <p class="text-xs text-win11-text-secondary m-0">Track Conditions & Weather</p>
           </div>
-          <FieldDescription config-name="event" field-name="rain" />
-        </el-form-item>
-        <el-form-item :label="t('form.weatherRandomness')">
-          <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
-            <el-slider v-model="event.weatherRandomness" :min="0" :max="7" :step="1" :format-tooltip="formatWeatherRandomness" style="flex: 1;" />
-            <span style="min-width: 40px; text-align: right;">{{ event.weatherRandomness }}</span>
-          </div>
-          <FieldDescription config-name="event" field-name="weatherRandomness" />
-        </el-form-item>
-        <el-form-item :label="t('form.isFixedConditionQualification')">
-          <el-switch v-model="event.isFixedConditionQualification" :active-value="1" :inactive-value="0" />
-          <FieldDescription config-name="event" field-name="isFixedConditionQualification" />
-        </el-form-item>
-        <el-form-item :label="t('form.simracerWeatherConditions')">
-          <el-switch v-model="event.simracerWeatherConditions" :active-value="1" :inactive-value="0" />
-          <FieldDescription config-name="event" field-name="simracerWeatherConditions" />
-        </el-form-item>
-      </el-form>
-    </el-card>
-
-    <!-- 时间设置 -->
-    <el-card class="section-card">
-      <template #header>
-        <h3>{{ t('form.timeSettings') }}</h3>
-      </template>
-      <el-form :model="event" label-width="220px">
-        <el-form-item :label="t('form.preRaceWaitingTimeSeconds')">
-          <el-input-number v-model="event.preRaceWaitingTimeSeconds" :min="0" />
-          <FieldDescription config-name="event" field-name="preRaceWaitingTimeSeconds" />
-        </el-form-item>
-        <el-form-item :label="t('form.postQualySeconds')">
-          <el-input-number v-model="event.postQualySeconds" :min="0" />
-          <FieldDescription config-name="event" field-name="postQualySeconds" />
-        </el-form-item>
-        <el-form-item :label="t('form.postRaceSeconds')">
-          <el-input-number v-model="event.postRaceSeconds" :min="0" />
-          <FieldDescription config-name="event" field-name="postRaceSeconds" />
-        </el-form-item>
-        <el-form-item :label="t('form.sessionOverTimeSeconds')">
-          <el-input-number v-model="event.sessionOverTimeSeconds" :min="0" />
-          <FieldDescription config-name="event" field-name="sessionOverTimeSeconds" />
-        </el-form-item>
-      </el-form>
-    </el-card>
-
-    <!-- 赛事会话阶段 -->
-    <el-card class="section-card">
-      <template #header>
-        <h3>{{ t('form.sessions') }}</h3>
-      </template>
-      <div class="sessions-list">
-        <div v-for="(session, index) in event.sessions" :key="index" class="session-item">
-          <el-card>
-            <template #header>
-              <div class="session-header">
-                <span>{{ sessionCardTitle(session.sessionType, index) }}</span>
-                <el-button
-                  type="danger"
-                  size="small"
-                  :icon="Delete"
-                  circle
-                  @click="removeSession(index)"
-                />
-              </div>
-            </template>
-            <el-form :model="session" label-width="150px">
-              <el-form-item :label="t('form.sessionType')">
-                <el-select v-model="session.sessionType" :placeholder="t('common.pleaseSelect')" filterable>
-                  <el-option :label="t('sessionTypes.practice')" value="P" />
-                  <el-option :label="t('sessionTypes.qualify')" value="Q" />
-                  <el-option :label="t('sessionTypes.race')" value="R" />
-                </el-select>
-              </el-form-item>
-              <el-form-item :label="t('form.dayOfWeekend')">
-                <el-select v-model="session.dayOfWeekend" :placeholder="t('common.pleaseSelect')" filterable>
-                  <el-option :label="t('daysOfWeekend.friday')" :value="1" />
-                  <el-option :label="t('daysOfWeekend.saturday')" :value="2" />
-                  <el-option :label="t('daysOfWeekend.sunday')" :value="3" />
-                </el-select>
-              </el-form-item>
-              <el-form-item :label="t('form.timeOfDay')">
-                <el-select v-model="session.hourOfDay" :placeholder="t('common.pleaseSelect')" filterable>
-                  <el-option v-for="hour in 24" :key="hour" :label="`${hour - 1}:00`" :value="hour - 1" />
-                </el-select>
-              </el-form-item>
-              <el-form-item :label="t('form.sessionDurationMinutes')">
-                <el-input-number v-model="session.sessionDurationMinutes" :min="1" />
-              </el-form-item>
-              <el-form-item :label="t('form.timeMultiplier')">
-                <el-input-number v-model="session.timeMultiplier" :min="1" :max="24" />
-              </el-form-item>
-            </el-form>
-          </el-card>
         </div>
-        <el-button type="primary" :icon="Plus" @click="addSession">{{ t('common.add') }}</el-button>
+      </template>
+
+      <div class="space-y-6">
+        <div class="win11-form-grid cols-2">
+          <div class="win11-form-field">
+            <label class="win11-form-label">{{ t('form.track') }}</label>
+            <Win11Select
+              v-model="event.track"
+              :options="trackOptions"
+            />
+          </div>
+
+          <div class="win11-form-field">
+            <label class="win11-form-label">{{ t('form.ambientTemp') }} °C</label>
+            <Win11Input
+              v-model.number="event.ambientTemp"
+              type="number"
+            />
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <div class="win11-form-field">
+            <Win11Slider
+              v-model="event.cloudLevel"
+              :label="t('form.cloudLevel')"
+              :min="0"
+              :max="1"
+              :step="0.1"
+            />
+          </div>
+
+          <div class="win11-form-field">
+            <Win11Slider
+              v-model="event.rain"
+              :label="t('form.rain')"
+              :min="0"
+              :max="1"
+              :step="0.1"
+            />
+          </div>
+
+          <div class="win11-form-field">
+            <Win11Slider
+              v-model="event.weatherRandomness"
+              :label="t('form.weatherRandomness')"
+              :min="0"
+              :max="7"
+              :step="1"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="win11-toggle-row">
+            <div class="win11-toggle-info">
+              <span class="win11-toggle-label">{{ t('form.isFixedConditionQualification') }}</span>
+              <span class="win11-toggle-desc">Fixed weather for qualifying</span>
+            </div>
+            <Win11Toggle
+              :model-value="event.isFixedConditionQualification"
+              @update:model-value="event.isFixedConditionQualification = $event"
+            />
+          </div>
+
+          <div class="win11-toggle-row">
+            <div class="win11-toggle-info">
+              <span class="win11-toggle-label">{{ t('form.simracerWeatherConditions') }}</span>
+              <span class="win11-toggle-desc">Real weather conditions</span>
+            </div>
+            <Win11Toggle
+              :model-value="event.simracerWeatherConditions"
+              @update:model-value="event.simracerWeatherConditions = $event"
+            />
+          </div>
+        </div>
       </div>
-    </el-card>
+    </Win11Card>
+
+    <Win11Card>
+      <template #title>
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-md bg-win11-accent/10 flex items-center justify-center">
+            <svg class="w-5 h-5 text-win11-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-base font-semibold text-win11-text m-0">{{ t('form.timeSettings') }}</h3>
+            <p class="text-xs text-win11-text-secondary m-0">Session Timing Configuration</p>
+          </div>
+        </div>
+      </template>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="win11-form-field">
+          <label class="win11-form-label">{{ t('form.preRaceWaitingTimeSeconds') }}</label>
+          <Win11Input
+            v-model.number="event.preRaceWaitingTimeSeconds"
+            type="number"
+          />
+        </div>
+
+        <div class="win11-form-field">
+          <label class="win11-form-label">{{ t('form.postQualySeconds') }}</label>
+          <Win11Input
+            v-model.number="event.postQualySeconds"
+            type="number"
+          />
+        </div>
+
+        <div class="win11-form-field">
+          <label class="win11-form-label">{{ t('form.postRaceSeconds') }}</label>
+          <Win11Input
+            v-model.number="event.postRaceSeconds"
+            type="number"
+          />
+        </div>
+
+        <div class="win11-form-field">
+          <label class="win11-form-label">{{ t('form.sessionOverTimeSeconds') }}</label>
+          <Win11Input
+            v-model.number="event.sessionOverTimeSeconds"
+            type="number"
+          />
+        </div>
+      </div>
+    </Win11Card>
+
+    <Win11Card>
+      <template #title>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-md bg-win11-accent/10 flex items-center justify-center">
+              <svg class="w-5 h-5 text-win11-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-base font-semibold text-win11-text m-0">{{ t('form.sessions') }}</h3>
+              <p class="text-xs text-win11-text-secondary m-0">Race Sessions Configuration</p>
+            </div>
+          </div>
+          <Win11Button @click="addSession" variant="primary">
+            + Add Session
+          </Win11Button>
+        </div>
+      </template>
+
+      <div class="space-y-4">
+        <div v-for="(session, index) in event.sessions" :key="index"
+             class="win11-session-card">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-md bg-win11-accent flex items-center justify-center text-white font-semibold text-sm">
+                {{ index + 1 }}
+              </div>
+              <h4 class="text-base font-semibold text-win11-text">{{ sessionCardTitle(session.sessionType, index) }}</h4>
+            </div>
+            <button @click="removeSession(index)" class="win11-button-icon text-red-500 hover:text-red-400">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            <div class="win11-form-field">
+              <label class="win11-form-label">{{ t('form.sessionType') }}</label>
+              <Win11Select
+                v-model="session.sessionType"
+                :options="sessionTypeOptions"
+              />
+            </div>
+
+            <div class="win11-form-field">
+              <label class="win11-form-label">{{ t('form.dayOfWeekend') }}</label>
+              <Win11Select
+                v-model="session.dayOfWeekend"
+                :options="dayOfWeekendOptions"
+              />
+            </div>
+
+            <div class="win11-form-field">
+              <label class="win11-form-label">{{ t('form.timeOfDay') }}</label>
+              <Win11Select
+                v-model="session.hourOfDay"
+                :options="hourOptions"
+              />
+            </div>
+
+            <div class="win11-form-field">
+              <label class="win11-form-label">{{ t('form.sessionDurationMinutes') }}</label>
+              <Win11Input
+                v-model.number="session.sessionDurationMinutes"
+                type="number"
+              />
+            </div>
+
+            <div class="win11-form-field">
+              <label class="win11-form-label">{{ t('form.timeMultiplier') }}</label>
+              <Win11Input
+                v-model.number="session.timeMultiplier"
+                type="number"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </Win11Card>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Delete, Plus } from '@element-plus/icons-vue'
 import type { Event as EventType } from '../types/configuration'
 import { getTrackOptions } from '../i18n/mappings'
-import FieldDescription from './FieldDescription.vue'
 import { t } from '../i18n'
+import { Win11Card, Win11Input, Win11Select, Win11Toggle, Win11Slider, Win11Button } from './win11'
 
 const props = defineProps<{
   event: EventType
@@ -142,28 +239,24 @@ const props = defineProps<{
 
 const trackOptions = computed(() => getTrackOptions())
 
-function formatCloudLevel(value: number): string {
-  if (value === 0) return t('weather.clear')
-  if (value < 0.3) return t('weather.lightCloud')
-  if (value < 0.6) return t('weather.mediumCloud')
-  if (value < 0.8) return t('weather.heavyCloud')
-  return t('weather.heavyCloud')
-}
+const sessionTypeOptions = computed(() => [
+  { label: t('sessionTypes.practice'), value: 'P' },
+  { label: t('sessionTypes.qualify'), value: 'Q' },
+  { label: t('sessionTypes.race'), value: 'R' }
+])
 
-function formatRainLevel(value: number): string {
-  if (value === 0) return t('weather.clear')
-  if (value < 0.3) return t('weather.lightRain')
-  if (value < 0.6) return t('weather.mediumRain')
-  if (value < 0.8) return t('weather.heavyRain')
-  return t('weather.thunderstorm')
-}
+const dayOfWeekendOptions = computed(() => [
+  { label: t('daysOfWeekend.friday'), value: 1 },
+  { label: t('daysOfWeekend.saturday'), value: 2 },
+  { label: t('daysOfWeekend.sunday'), value: 3 }
+])
 
-function formatWeatherRandomness(value: number): string {
-  if (value === 0) return t('weatherRandomness.disabled')
-  if (value <= 2) return t('weatherRandomness.realistic')
-  if (value <= 5) return t('weatherRandomness.variable')
-  return t('weatherRandomness.chaotic')
-}
+const hourOptions = computed(() =>
+  Array.from({ length: 24 }, (_, i) => ({
+    label: `${String(i).padStart(2, '0')}:00`,
+    value: i
+  }))
+)
 
 function getSessionTypeName(type: string): string {
   switch (type) {
@@ -182,7 +275,6 @@ function nthSessionLabel(index: number): string {
   return t('form.nthSession').replace('{n}', String(index + 1))
 }
 
-/** 卡片标题按列表顺序（第几场），与 dayOfWeekend / 时刻无关 */
 function sessionCardTitle(sessionType: string, index: number): string {
   return `${getSessionTypeName(sessionType)} - ${nthSessionLabel(index)}`
 }
@@ -203,46 +295,33 @@ function removeSession(index: number) {
 </script>
 
 <style scoped>
-.event-form {
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  max-width: 800px;
-  margin: 0 auto;
+.win11-form-field {
+  @apply flex flex-col gap-2;
 }
 
-.section-card {
-  margin-bottom: 0;
+.win11-toggle-row {
+  @apply flex items-center justify-between py-3;
+  @apply border-b border-win11-border;
 }
 
-.sessions-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+.win11-toggle-row:last-child {
+  @apply border-b-0;
 }
 
-.session-item {
-  margin-bottom: 16px;
+.win11-toggle-info {
+  @apply flex flex-col gap-1;
 }
 
-.session-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.win11-toggle-label {
+  @apply text-sm text-win11-text;
 }
 
-.el-form-item {
-  margin-bottom: 12px;
+.win11-toggle-desc {
+  @apply text-xs text-win11-text-secondary;
 }
 
-.section-card :deep(h3) {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-:deep(.field-description) {
-  margin-left: 8px;
+.win11-session-card {
+  @apply p-6 rounded-lg;
+  @apply bg-win11-control-bg border border-win11-border;
 }
 </style>

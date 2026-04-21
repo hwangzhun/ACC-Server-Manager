@@ -1,12 +1,11 @@
 <template>
-  <el-dialog
+  <Win11Dialog
     v-model="dialogVisible"
     :title="t('bop.importFromLfm')"
     width="500px"
-    :close-on-click-modal="false"
   >
     <div class="import-dialog-content">
-      <el-alert
+      <Win11Alert
         :title="t('bop.importInstructions')"
         :description="t('bop.importDescription')"
         type="info"
@@ -15,76 +14,68 @@
         class="import-info"
       />
 
-      <!-- 缓存状态显示 -->
       <div v-if="cacheStatus?.exists" class="cache-status">
-        <el-tag :type="cacheStatus.isValid ? 'success' : 'warning'">
+        <Win11Tag :type="cacheStatus.isValid ? 'success' : 'warning'" size="small">
           {{ cacheStatus.isValid ? t('bop.cacheValid') : t('bop.cacheExpired') }}
-        </el-tag>
+        </Win11Tag>
         <span class="cache-info">
           {{ t('bop.cachedAt') }} {{ formatCacheDate(cacheStatus.timestamp) }}
         </span>
-        <el-button
+        <Win11Button
           v-if="!cacheStatus.isValid"
-          type="primary"
+          variant="primary"
           size="small"
           :loading="isRefreshing"
           @click="handleRefreshCache"
         >
           {{ t('bop.refreshCache') }}
-        </el-button>
+        </Win11Button>
       </div>
 
-      <el-form label-width="80px" class="import-form">
-        <el-form-item :label="t('form.track')">
-          <el-select
+      <div class="import-form">
+        <div class="win11-form-field">
+          <label class="win11-form-label">{{ t('form.track') }}</label>
+          <Win11Select
             v-model="importForm.track"
+            :options="trackOptions"
             :placeholder="t('common.pleaseSelect')"
             filterable
             style="width: 100%"
-          >
-            <el-option
-              v-for="track in tracks"
-              :key="track"
-              :label="formatTrackName(track)"
-              :value="track"
-            />
-          </el-select>
-        </el-form-item>
+          />
+        </div>
 
-        <el-form-item :label="t('bop.carClass')">
-          <el-select
+        <div class="win11-form-field">
+          <label class="win11-form-label">{{ t('bop.carClass') }}</label>
+          <Win11Select
             v-model="importForm.carClass"
+            :options="carClassOptions"
             :placeholder="t('common.pleaseSelect')"
             filterable
             style="width: 100%"
-          >
-            <el-option :label="t('bop.allClasses')" value="all" />
-            <el-option label="GT3" value="GT3" />
-            <el-option label="GT4" value="GT4" />
-            <el-option label="GT2" value="GT2" />
-          </el-select>
-        </el-form-item>
-      </el-form>
+          />
+        </div>
+      </div>
 
-      <!-- 加载状态 -->
       <div v-if="isLoading" class="loading-state">
-        <el-icon class="is-loading"><Loading /></el-icon>
+        <svg class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
         <span>{{ loadingMessage }}</span>
       </div>
 
-      <!-- 错误提示 -->
-      <el-alert
+      <Win11Alert
         v-if="errorMessage"
-        :title="t('common.error')"
-        :description="errorMessage"
         type="error"
         show-icon
         closable
         @close="errorMessage = ''"
         class="error-alert"
-      />
+      >
+        <template #title>{{ t('common.error') }}</template>
+        {{ errorMessage }}
+      </Win11Alert>
 
-      <!-- 导入预览 -->
       <div v-if="previewData && !isLoading" class="import-preview">
         <h5>{{ t('bop.importPreview') }}</h5>
         <div class="preview-stats">
@@ -105,23 +96,22 @@
     </div>
 
     <template #footer>
-      <el-button @click="handleCancel">{{ t('common.cancel') }}</el-button>
-      <el-button
-        type="primary"
+      <Win11Button variant="secondary" @click="handleCancel">{{ t('common.cancel') }}</Win11Button>
+      <Win11Button
+        variant="primary"
         :loading="isImporting"
         :disabled="isLoading || !previewData || previewData.entryCount === 0"
         @click="handleConfirmImport"
       >
         {{ t('common.confirm') }}
-      </el-button>
+      </Win11Button>
     </template>
-  </el-dialog>
+  </Win11Dialog>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { Loading } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { Win11Dialog, Win11Button, Win11Select, Win11Tag, Win11Alert, notify } from '../win11'
 import { TRACKS } from '../../types/defaults'
 import type { BopEntry } from '../../types/configuration'
 import type { CarClass } from '../../utils/lfmBopService'
@@ -159,7 +149,6 @@ const dialogVisible = computed({
   set: (value) => emit('update:modelValue', value)
 })
 
-const tracks = TRACKS
 const defaultImportTrack = TRACKS[0] ?? 'monza'
 const importForm = ref({
   track: defaultImportTrack,
@@ -173,6 +162,20 @@ const isRefreshing = ref(false)
 const isImporting = ref(false)
 const loadingMessage = ref('')
 const errorMessage = ref('')
+
+const trackOptions = computed(() => 
+  TRACKS.map(track => ({
+    value: track,
+    label: useTrackName(track).value
+  }))
+)
+
+const carClassOptions = [
+  { value: 'all', label: t('bop.allClasses') },
+  { value: 'GT3', label: 'GT3' },
+  { value: 'GT4', label: 'GT4' },
+  { value: 'GT2', label: 'GT2' }
+]
 
 const formatTrackName = (track: string) => {
   return useTrackName(track).value
@@ -220,7 +223,6 @@ function formatCacheDate(timestamp: number): string {
 }
 
 async function loadCacheStatus() {
-  // 统一使用 getLfmBopStatus（在 Tauri 环境下自动调用 Rust 缓存命令）
   try {
     const s = await getLfmBopStatus()
     if (s.success) {
@@ -243,7 +245,6 @@ async function loadFullBopEntries() {
   errorMessage.value = ''
   fullEntries.value = []
   try {
-    // Tauri 环境优先使用 Rust 缓存（fetchLfmBopCache 已处理环境判断）
     const res = await fetchAllLfmBop(false)
     if (res.success && Array.isArray(res.data) && res.data.length > 0) {
       fullEntries.value = transformServerBopToEntries(
@@ -255,7 +256,6 @@ async function loadFullBopEntries() {
       )
     }
     
-    // 更新缓存状态
     await loadCacheStatus()
     
     if (fullEntries.value.length === 0) {
@@ -274,11 +274,10 @@ async function handleRefreshCache() {
   loadingMessage.value = t('bop.refreshingCache')
   errorMessage.value = ''
   try {
-    // 统一使用 refreshLfmBopCache（在 Tauri 环境下自动调用 Rust 缓存刷新）
     await refreshLfmBopCache()
     await loadCacheStatus()
     await loadFullBopEntries()
-    ElMessage.success(t('bop.cacheRefreshed'))
+    notify.success(t('bop.cacheRefreshed'))
   } catch (error) {
     errorMessage.value =
       error instanceof Error ? error.message : t('bop.cacheRefreshFailed')
@@ -349,13 +348,13 @@ watch(() => props.modelValue, (isOpen) => {
   align-items: center;
   gap: 12px;
   padding: 12px;
-  background: var(--el-fill-color-light);
-  border-radius: 4px;
+  background: var(--win11-control-bg);
+  border-radius: 8px;
 }
 
 .cache-info {
   font-size: 12px;
-  color: var(--el-text-color-secondary);
+  color: var(--win11-text-secondary);
 }
 
 .loading-state {
@@ -364,7 +363,7 @@ watch(() => props.modelValue, (isOpen) => {
   justify-content: center;
   gap: 8px;
   padding: 24px;
-  color: var(--el-color-primary);
+  color: var(--win11-accent);
 }
 
 .error-alert {
@@ -373,14 +372,15 @@ watch(() => props.modelValue, (isOpen) => {
 
 .import-preview {
   padding: 12px;
-  background: var(--el-fill-color-lighter);
-  border-radius: 4px;
+  background: var(--win11-control-bg);
+  border-radius: 8px;
 }
 
 .import-preview h5 {
   margin: 0 0 12px 0;
   font-size: 14px;
   font-weight: 600;
+  color: var(--win11-text);
 }
 
 .preview-stats {
@@ -396,10 +396,29 @@ watch(() => props.modelValue, (isOpen) => {
 
 .stat-label {
   font-weight: 500;
-  color: var(--el-text-color-secondary);
+  color: var(--win11-text-secondary);
 }
 
 .stat-value {
   font-weight: 600;
+  color: var(--win11-text);
+}
+
+.win11-form-field {
+  @apply flex flex-col gap-2;
+}
+
+.win11-form-label {
+  @apply text-sm font-medium text-win11-text;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 </style>

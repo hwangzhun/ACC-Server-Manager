@@ -1,212 +1,252 @@
 <template>
-  <el-dialog
-    v-model="dialogVisible"
+  <!-- =============================================
+       主弹窗：车队信息 + 配置 + 车手列表总览
+  ============================================== -->
+  <Win11Dialog
+    v-model:visible="dialogVisible"
     :title="editEntry ? t('title.editEntry') : t('title.addEntry')"
-    width="900px"
+    width="820px"
     @close="handleClose"
   >
-    <el-form ref="formRef" :model="entryForm" :rules="rules" label-width="120px">
-      <el-divider content-position="left">{{ t('common.teamInfo') }}</el-divider>
-      
-      <el-form-item :label="t('form.teamName')" prop="teamName">
-        <el-input v-model="entryForm.teamName" :placeholder="t('placeholder.inputTeamName')" />
-      </el-form-item>
-      
-      <el-row :gutter="20">
-        <el-col :span="8">
-          <el-form-item :label="t('form.raceNumber')">
-            <el-input-number v-model="entryForm.raceNumber" :min="0" :max="999" />
-          </el-form-item>
-        </el-col>
-        <el-col :span="8">
-          <el-form-item :label="t('form.defaultGridPosition')">
-            <el-input-number v-model="entryForm.defaultGridPosition" :min="0" :max="60" />
-          </el-form-item>
-        </el-col>
-        <el-col :span="8">
-          <el-form-item :label="t('form.ballastKg')">
-            <el-input-number v-model="entryForm.ballastKg" :min="0" :max="40" />
-          </el-form-item>
-        </el-col>
-      </el-row>
-      
-      <el-row :gutter="20">
-        <el-col :span="8">
-          <el-form-item :label="t('form.restrictor')">
-            <el-input-number v-model="entryForm.restrictor" :min="0" :max="20" />
-          </el-form-item>
-        </el-col>
-        <el-col :span="8">
-          <el-form-item :label="t('form.forcedCarModel')">
-            <el-select v-model="entryForm.forcedCarModel" :placeholder="t('common.pleaseSelect')" filterable clearable style="width: 100%;">
-              <el-option :label="t('options.notForced')" :value="-1" />
-              <el-option
-                v-for="car in carModelOptions"
-                :key="car.value"
-                :label="car.label"
-                :value="car.value"
-              />
-            </el-select>
-          </el-form-item>
-        </el-col>
-        <el-col :span="8">
-          <el-form-item :label="t('form.isServerAdmin')">
-            <el-switch v-model="entryForm.isServerAdmin" :active-value="1" :inactive-value="0" />
-          </el-form-item>
-        </el-col>
-      </el-row>
+    <div class="entry-dialog-layout">
 
-      <el-row :gutter="20">
-        <el-col :span="8">
-          <el-form-item :label="t('form.overrideDriverInfo')">
-            <el-switch v-model="entryForm.overrideDriverInfo" :active-value="1" :inactive-value="0" />
-          </el-form-item>
-        </el-col>
-      </el-row>
-
-      <el-divider content-position="left">{{ t('common.driverList') }}</el-divider>
-      
-      <div class="drivers-actions">
-        <el-button type="primary" size="small" :icon="Plus" @click="addDriver">
-          {{ t('common.addDriver') }}
-        </el-button>
-      </div>
-
-      <el-empty v-if="entryForm.drivers.length === 0" :description="t('common.noDrivers')" />
-
-      <el-collapse v-model="activeDrivers" v-else>
-        <el-collapse-item
-          v-for="(driver, index) in entryForm.drivers"
-          :key="index"
-          :name="index"
-          :class="{ 'collapse-driver-steamid-invalid': isDriverSteamIdInvalid(driver.playerID) }"
-        >
-          <template #title>
-            <div
-              class="driver-title"
-              :class="{ 'driver-title--steamid-invalid': isDriverSteamIdInvalid(driver.playerID) }"
-            >
-              <span>{{ driver.firstName }} {{ driver.lastName || t('common.unnamed') }}</span>
-              <el-button
-                type="danger"
-                size="small"
-                :icon="Delete"
-                circle
-                @click.stop="removeDriver(index)"
+      <!-- 左侧：车队信息与配置 -->
+      <div class="entry-left">
+        <!-- 车队核心信息 -->
+        <section class="entry-section">
+          <h4 class="entry-section-title">{{ t('common.teamInfo') }}</h4>
+          <div class="entry-fields">
+            <div class="entry-field">
+              <label class="entry-label required">{{ t('form.teamName') }}</label>
+              <Win11Input
+                v-model="entryForm.teamName"
+                :placeholder="t('placeholder.inputTeamName')"
               />
             </div>
-          </template>
+            <div class="entry-field entry-field--row">
+              <div class="entry-field">
+                <label class="entry-label">{{ t('form.raceNumber') }}</label>
+                <Win11InputNumber v-model="entryForm.raceNumber" :min="0" :max="999" />
+              </div>
+              <div class="entry-field">
+                <label class="entry-label">{{ t('form.defaultGridPosition') }}</label>
+                <Win11InputNumber v-model="entryForm.defaultGridPosition" :min="0" :max="60" />
+              </div>
+            </div>
+            <div class="entry-field entry-field--row">
+              <div class="entry-field">
+                <label class="entry-label">{{ t('form.ballastKg') }}</label>
+                <Win11InputNumber v-model="entryForm.ballastKg" :min="0" :max="40" />
+              </div>
+              <div class="entry-field">
+                <label class="entry-label">{{ t('form.restrictor') }}</label>
+                <Win11InputNumber v-model="entryForm.restrictor" :min="0" :max="20" />
+              </div>
+            </div>
+            <div class="entry-field">
+              <label class="entry-label">{{ t('form.forcedCarModel') }}</label>
+              <Win11Select
+                v-model="entryForm.forcedCarModel"
+                :options="carModelOptionsWithDefault"
+                :placeholder="t('common.pleaseSelect')"
+                filterable
+              />
+            </div>
+          </div>
+        </section>
 
-          <el-form :model="driver" label-width="100px" size="small">
-            <el-row :gutter="15">
-              <el-col :span="12">
-                <el-form-item :label="t('common.category')">
-                  <el-select v-model="driver.driverCategory" :placeholder="t('common.pleaseSelect')" filterable style="width: 100%;">
-                    <el-option
-                      v-for="level in driverLevelOptions"
-                      :key="level.value"
-                      :label="level.label"
-                      :value="level.value"
-                    />
-                  </el-select>
-                </el-form-item>
-              </el-col>
-              <el-col :span="12">
-                <el-form-item :label="t('form.nationality')">
-                  <el-select v-model="driver.nationality" :placeholder="t('common.pleaseSelect')" filterable style="width: 100%;">
-                    <el-option
-                      v-for="nation in nationalityOptions"
-                      :key="nation.value"
-                      :label="nation.name"
-                      :value="nation.value"
-                    >
-                      <span class="nationality-option">
-                        <span
-                          v-if="nation.flagIso"
-                          class="fi nationality-option__flag"
-                          :class="`fi-${nation.flagIso}`"
-                        />
-                        <span>{{ nation.name }}</span>
-                      </span>
-                    </el-option>
-                  </el-select>
-                </el-form-item>
-              </el-col>
-            </el-row>
+        <!-- 高级配置 -->
+        <section class="entry-section">
+          <h4 class="entry-section-title">{{ t('title.advancedSettings') }}</h4>
+          <div class="entry-toggles">
+            <div class="entry-toggle-row">
+              <div class="entry-toggle-info">
+                <span class="entry-toggle-label">{{ t('form.isServerAdmin') }}</span>
+              </div>
+              <Win11Toggle
+                :model-value="entryForm.isServerAdmin === 1"
+                @update:model-value="entryForm.isServerAdmin = $event ? 1 : 0"
+              />
+            </div>
+            <div class="entry-toggle-row">
+              <div class="entry-toggle-info">
+                <span class="entry-toggle-label">{{ t('form.overrideDriverInfo') }}</span>
+              </div>
+              <Win11Toggle
+                :model-value="entryForm.overrideDriverInfo === 1"
+                @update:model-value="entryForm.overrideDriverInfo = $event ? 1 : 0"
+              />
+            </div>
+          </div>
+        </section>
+      </div>
 
-            <el-row :gutter="15">
-              <el-col :span="12">
-                <el-form-item :label="t('form.firstName')" prop="firstName">
-                  <el-input v-model="driver.firstName" :placeholder="t('form.firstName')" />
-                </el-form-item>
-              </el-col>
-              <el-col :span="12">
-                <el-form-item :label="t('form.lastName')">
-                  <el-input
-                    v-model="driver.lastName"
-                    :placeholder="t('form.lastName')"
-                    @blur="onDriverLastNameBlur(driver)"
-                  />
-                </el-form-item>
-              </el-col>
-            </el-row>
+      <!-- 右侧：车手列表 -->
+      <div class="entry-right">
+        <div class="driver-list-header">
+          <div class="driver-list-title-group">
+            <span class="driver-list-count">{{ entryForm.drivers.length }}</span>
+            <span class="driver-list-label">{{ t('common.driverList') }}</span>
+          </div>
+          <Win11Button variant="primary" size="small" @click="openAddDriver">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            {{ t('common.addDriver') }}
+          </Win11Button>
+        </div>
 
-            <el-row :gutter="15">
-              <el-col :span="12">
-                <el-form-item
-                  :label="t('form.playerId')"
-                  :class="{ 'form-item-steamid-invalid': isDriverSteamIdInvalid(driver.playerID) }"
+        <!-- 空状态 -->
+        <div v-if="entryForm.drivers.length === 0" class="driver-list-empty">
+          <svg class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <p>{{ t('common.noDrivers') }}</p>
+          <span>{{ t('message.clickToAddDriver') }}</span>
+        </div>
+
+        <!-- 车手摘要列表 -->
+        <div v-else class="driver-summary-list">
+          <div
+            v-for="(driver, index) in entryForm.drivers"
+            :key="index"
+            class="driver-summary-card"
+            :class="{ 'driver-summary-card--invalid': isDriverSteamIdInvalid(driver.playerID) }"
+          >
+            <div class="driver-summary-avatar">
+              <span class="driver-initial">{{ getDriverInitial(driver) }}</span>
+            </div>
+            <div class="driver-summary-info">
+              <span class="driver-summary-name">
+                {{ driver.firstName || t('common.unnamed') }} {{ driver.lastName }}
+              </span>
+              <div class="driver-summary-meta">
+                <Win11Tag
+                  v-if="getDriverCategoryLabel(driver.driverCategory)"
+                  size="small"
+                  :type="getDriverCategoryType(driver.driverCategory)"
                 >
-                  <el-input
-                    v-model="driver.playerID"
-                    :placeholder="t('placeholder.steamId')"
-                    maxlength="20"
-                    @blur="onDriverPlayerIdBlur(driver)"
-                  />
-                  <div
-                    v-if="isSteamIdTooShort(driver.playerID)"
-                    class="steamid-field-hint steamid-field-hint--warning"
-                  >
-                    {{ steamIdTooShortText(driver.playerID) }}
-                  </div>
-                  <div
-                    v-else-if="isSteamIdTooLong(driver.playerID)"
-                    class="steamid-field-hint steamid-field-hint--warning"
-                  >
-                    {{ steamIdTooLongText(driver.playerID) }}
-                  </div>
-                </el-form-item>
-              </el-col>
-              <el-col :span="12">
-                <el-form-item :label="t('form.shortName')">
-                  <el-input
-                    :model-value="driver.shortName"
-                    :placeholder="t('form.shortName')"
-                    maxlength="3"
-                    show-word-limit
-                    @update:model-value="(v: string) => (driver.shortName = normalizeShortNameInput(v))"
-                  />
-                </el-form-item>
-              </el-col>
-            </el-row>
-          </el-form>
-        </el-collapse-item>
-      </el-collapse>
-    </el-form>
+                  {{ getDriverCategoryLabel(driver.driverCategory) }}
+                </Win11Tag>
+                <span
+                  v-if="isDriverSteamIdInvalid(driver.playerID)"
+                  class="driver-summary-steam-error"
+                >
+                  {{ t('message.invalidSteamId') }}
+                </span>
+                <span v-else-if="driver.playerID" class="driver-summary-steam">
+                  {{ maskSteamId(driver.playerID) }}
+                </span>
+              </div>
+            </div>
+            <div class="driver-summary-actions">
+              <button class="icon-btn" @click="openEditDriver(index)" :title="t('common.edit')">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </button>
+              <button class="icon-btn icon-btn--danger" @click="removeDriver(index)" :title="t('common.delete')">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <template #footer>
-      <el-button @click="handleClose">{{ t('common.cancel') }}</el-button>
-      <el-button type="primary" @click="handleSubmit">{{ t('common.confirm') }}</el-button>
+      <Win11Button variant="secondary" @click="handleClose">{{ t('common.cancel') }}</Win11Button>
+      <Win11Button variant="primary" @click="handleSubmit">{{ t('common.confirm') }}</Win11Button>
     </template>
-  </el-dialog>
+  </Win11Dialog>
+
+  <!-- =============================================
+       子弹窗：新增 / 编辑车手
+  ============================================== -->
+  <Win11Dialog
+    v-model:visible="driverDialogVisible"
+    :title="editingDriverIndex === null ? t('common.addDriver') : t('common.editDriver')"
+    width="560px"
+    :z-index="2100"
+    @close="closeDriverDialog"
+  >
+    <div class="driver-form">
+      <!-- 姓名 -->
+      <div class="driver-form-row">
+        <div class="driver-form-field">
+          <label class="entry-label">{{ t('form.firstName') }}</label>
+          <Win11Input v-model="driverDraft.firstName" :placeholder="t('form.firstName')" />
+        </div>
+        <div class="driver-form-field">
+          <label class="entry-label">{{ t('form.lastName') }}</label>
+          <Win11Input
+            v-model="driverDraft.lastName"
+            :placeholder="t('form.lastName')"
+            @blur="onDriverLastNameBlur"
+          />
+        </div>
+      </div>
+
+      <!-- 分类 + 国籍 -->
+      <div class="driver-form-row">
+        <div class="driver-form-field">
+          <label class="entry-label">{{ t('common.category') }}</label>
+          <Win11Select
+            v-model="driverDraft.driverCategory"
+            :options="driverLevelOptions"
+            :placeholder="t('common.pleaseSelect')"
+            filterable
+          />
+        </div>
+        <div class="driver-form-field">
+          <label class="entry-label">{{ t('form.nationality') }}</label>
+          <Win11Select
+            v-model="driverDraft.nationality"
+            :options="nationalityOptions"
+            :placeholder="t('common.pleaseSelect')"
+            filterable
+          />
+        </div>
+      </div>
+
+      <!-- SteamID -->
+      <div class="driver-form-field">
+        <label class="entry-label">{{ t('form.playerId') }}</label>
+        <Win11Input
+          v-model="driverDraft.playerID"
+          :placeholder="t('placeholder.steamId')"
+          maxlength="20"
+          :error="steamIdError"
+          @blur="onDriverPlayerIdBlur"
+        />
+        <p v-if="steamIdHint" class="driver-form-hint">{{ steamIdHint }}</p>
+      </div>
+
+      <!-- 缩写 -->
+      <div class="driver-form-field driver-form-field--short">
+        <label class="entry-label">{{ t('form.shortName') }}</label>
+        <Win11Input
+          v-model="driverDraft.shortName"
+          :placeholder="t('form.shortName')"
+          maxlength="3"
+          show-word-limit
+          @update:model-value="(v: string) => (driverDraft.shortName = normalizeShortNameInput(v))"
+        />
+      </div>
+    </div>
+
+    <template #footer>
+      <Win11Button variant="secondary" @click="closeDriverDialog">{{ t('common.cancel') }}</Win11Button>
+      <Win11Button variant="primary" @click="saveDriver">{{ t('common.save') }}</Win11Button>
+    </template>
+  </Win11Dialog>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, watch, computed } from 'vue'
-import { Delete, Plus } from '@element-plus/icons-vue'
 import type { Entry, Driver } from '../types/configuration'
-import type { FormInstance } from 'element-plus'
-import { ElMessage } from 'element-plus'
 import { driverCategories } from '../data/mappings'
 import { t } from '../i18n'
 import { getNationalitySelectOptionsI18n, getCarModelSelectOptionsForEntry } from '../i18n/mappings'
@@ -222,6 +262,16 @@ import {
   normalizeSteamId,
   requireValidSteamIdForDriver,
 } from '../utils/steamId'
+import {
+  Win11Dialog,
+  Win11Input,
+  Win11Select,
+  Win11Toggle,
+  Win11Button,
+  Win11InputNumber,
+  Win11Tag,
+  notify
+} from './win11'
 
 const props = defineProps<{
   editEntry?: Entry | null
@@ -234,20 +284,7 @@ const emit = defineEmits<{
   close: []
 }>()
 
-const formRef = ref<FormInstance>()
-const activeDrivers = ref<number[]>([])
-
-const carModelOptions = computed(() => getCarModelSelectOptionsForEntry())
-
-const driverLevelOptions = Object.entries(driverCategories)
-  .map(([value, label]) => ({
-    value: Number(value),
-    label: `${value} - ${label}`,
-  }))
-  .sort((a, b) => a.value - b.value)
-
-const nationalityOptions = computed(() => getNationalitySelectOptionsI18n())
-
+// ---- 车队表单 ----
 const entryForm = reactive<Entry>({
   teamName: '',
   raceNumber: 0,
@@ -262,14 +299,8 @@ const entryForm = reactive<Entry>({
   drivers: []
 })
 
-const rules = {
-  teamName: [{ required: true, message: t('message.pleaseInputTeamName'), trigger: 'blur' }]
-}
-
-// 监听编辑模式
 watch(() => props.editEntry, (newVal) => {
   if (newVal) {
-    // 编辑模式：复制数据到表单
     Object.assign(entryForm, {
       teamName: newVal.teamName,
       raceNumber: newVal.raceNumber,
@@ -284,56 +315,144 @@ watch(() => props.editEntry, (newVal) => {
       drivers: newVal.drivers.map((d: Driver) => ({ ...d }))
     })
   } else {
-    // 新增模式：重置表单
     resetForm()
   }
 }, { immediate: true })
 
-function onDriverLastNameBlur(driver: Driver) {
-  if (!driver.shortName?.trim()) {
-    driver.shortName = defaultShortNameFromLastName(driver.lastName)
+// ---- 下拉选项 ----
+const carModelOptions = computed(() => getCarModelSelectOptionsForEntry())
+const carModelOptionsWithDefault = computed(() => [
+  { value: -1, label: t('options.notForced') },
+  ...carModelOptions.value
+])
+
+const driverLevelOptions = Object.entries(driverCategories)
+  .map(([value, label]) => ({
+    value: Number(value),
+    label: `${value} - ${label}`
+  }))
+  .sort((a, b) => a.value - b.value)
+
+const nationalityOptions = computed(() =>
+  getNationalitySelectOptionsI18n().map(opt => ({ value: opt.value, label: opt.name }))
+)
+
+// ---- 子弹窗状态 ----
+const driverDialogVisible = ref(false)
+const editingDriverIndex = ref<number | null>(null)
+
+const driverDraft = reactive<Driver>({
+  driverCategory: 0,
+  firstName: '',
+  lastName: '',
+  playerID: '',
+  shortName: '',
+  nationality: 0
+})
+
+// ---- 子弹窗 SteamID 实时提示 ----
+const steamIdHint = computed(() => {
+  const pid = driverDraft.playerID
+  if (!pid) return ''
+  if (isSteamIdTooShort(pid)) {
+    return t('message.steamIdTooShort').replace('{count}', String(getSteamIdDigitCount(pid)))
   }
-}
+  if (isSteamIdTooLong(pid)) {
+    return t('message.steamIdTooLong').replace('{count}', String(getSteamIdDigitCount(pid)))
+  }
+  return ''
+})
 
-function steamIdTooShortText(pid: string | undefined) {
-  return t('message.steamIdTooShort').replace(
-    '{count}',
-    String(getSteamIdDigitCount(pid))
-  )
-}
-
-function steamIdTooLongText(pid: string | undefined) {
-  return t('message.steamIdTooLong').replace(
-    '{count}',
-    String(getSteamIdDigitCount(pid))
-  )
-}
+const steamIdError = computed(() => {
+  return isDriverSteamIdInvalid(driverDraft.playerID) ? t('message.invalidSteamId') : undefined
+})
 
 function steamIdSubmitErrorMessage(pid: string): string {
-  if (isSteamIdTooShort(pid)) return steamIdTooShortText(pid)
-  if (isSteamIdTooLong(pid)) return steamIdTooLongText(pid)
+  if (isSteamIdTooShort(pid)) {
+    return t('message.steamIdTooShort').replace('{count}', String(getSteamIdDigitCount(pid)))
+  }
+  if (isSteamIdTooLong(pid)) {
+    return t('message.steamIdTooLong').replace('{count}', String(getSteamIdDigitCount(pid)))
+  }
   return t('message.invalidSteamId')
 }
 
-function onDriverPlayerIdBlur(driver: Driver) {
-  driver.playerID = normalizeSteamId(driver.playerID || '')
-  const pid = driver.playerID
-  if (isSteamIdTooShort(pid)) {
-    ElMessage.warning(steamIdTooShortText(pid))
-  } else if (isSteamIdTooLong(pid)) {
-    ElMessage.warning(steamIdTooLongText(pid))
+// ---- 子弹窗操作 ----
+function openAddDriver() {
+  editingDriverIndex.value = null
+  Object.assign(driverDraft, { driverCategory: 0, firstName: '', lastName: '', playerID: '', shortName: '', nationality: 0 })
+  driverDialogVisible.value = true
+}
+
+function openEditDriver(index: number) {
+  editingDriverIndex.value = index
+  const d = entryForm.drivers[index]
+  Object.assign(driverDraft, { ...d })
+  driverDialogVisible.value = true
+}
+
+function closeDriverDialog() {
+  driverDialogVisible.value = false
+  editingDriverIndex.value = null
+}
+
+function saveDriver() {
+  driverDraft.playerID = normalizeSteamId(driverDraft.playerID || '')
+  const req = requireValidSteamIdForDriver(driverDraft.playerID)
+  if (!req.ok) {
+    if (req.reason === 'empty') {
+      notify.warning(t('message.pleaseInputDriverSteamId'))
+    } else {
+      notify.warning(steamIdSubmitErrorMessage(driverDraft.playerID))
+    }
+    return
+  }
+
+  driverDraft.playerID = req.normalized
+
+  if (!driverDraft.shortName?.trim() && driverDraft.lastName) {
+    driverDraft.shortName = defaultShortNameFromLastName(driverDraft.lastName)
+  }
+
+  if (editingDriverIndex.value !== null) {
+    entryForm.drivers[editingDriverIndex.value] = { ...driverDraft }
+  } else {
+    entryForm.drivers.push({ ...driverDraft })
+  }
+  closeDriverDialog()
+}
+
+// ---- 车手辅助函数 ----
+function getDriverCategoryLabel(category: number): string {
+  return driverCategories[category] || ''
+}
+
+function getDriverCategoryType(category: number): 'primary' | 'success' | 'warning' | 'danger' | 'info' {
+  const types: Record<number, 'primary' | 'success' | 'warning' | 'danger' | 'info'> = {
+    0: 'info', 1: 'warning', 2: 'success', 3: 'danger', 4: 'primary'
+  }
+  return types[category] || 'info'
+}
+
+function getDriverInitial(driver: Driver): string {
+  if (driver.firstName) return driver.firstName[0].toUpperCase()
+  if (driver.lastName) return driver.lastName[0].toUpperCase()
+  return '?'
+}
+
+function maskSteamId(id: string): string {
+  if (id.length <= 6) return id
+  return id.slice(0, 3) + '***' + id.slice(-3)
+}
+
+function onDriverLastNameBlur() {
+  if (!driverDraft.shortName?.trim()) {
+    driverDraft.shortName = defaultShortNameFromLastName(driverDraft.lastName)
   }
 }
 
-function addDriver() {
-  entryForm.drivers.push({
-    driverCategory: 0,
-    firstName: '',
-    lastName: '',
-    playerID: '',
-    shortName: '',
-    nationality: 0
-  })
+function onDriverPlayerIdBlur() {
+  driverDraft.playerID = normalizeSteamId(driverDraft.playerID || '')
 }
 
 function removeDriver(index: number) {
@@ -352,98 +471,323 @@ function resetForm() {
   entryForm.overrideDriverInfo = 1
   entryForm.customCar = ''
   entryForm.drivers = []
-  activeDrivers.value = []
-  formRef.value?.resetFields()
 }
 
 function handleClose() {
+  closeDriverDialog()
   resetForm()
   dialogVisible.value = false
-  // 通知父组件编辑已结束
   emit('close')
 }
 
 async function handleSubmit() {
-  if (!formRef.value) return
+  if (entryForm.drivers.length === 0) {
+    notify.warning(t('message.pleaseAddAtLeastOneDriver'))
+    return
+  }
 
-  try {
-    await formRef.value.validate()
-
-    if (entryForm.drivers.length === 0) {
-      ElMessage.warning(t('message.pleaseAddAtLeastOneDriver'))
+  for (const d of entryForm.drivers) {
+    d.shortName = normalizeShortNameInput(d.shortName || '')
+    const req = requireValidSteamIdForDriver(d.playerID)
+    if (!req.ok) {
+      if (req.reason === 'empty') {
+        notify.warning(t('message.pleaseInputDriverSteamId'))
+      } else {
+        notify.warning(steamIdSubmitErrorMessage(d.playerID))
+      }
       return
     }
-
-    for (const d of entryForm.drivers) {
-      d.shortName = normalizeShortNameInput(d.shortName || '')
-      const req = requireValidSteamIdForDriver(d.playerID)
-      if (!req.ok) {
-        if (req.reason === 'empty') {
-          ElMessage.error(t('message.steamIdRequired'))
-        } else {
-          d.playerID = req.normalized
-          ElMessage.error(steamIdSubmitErrorMessage(d.playerID))
-        }
-        return
-      }
-      d.playerID = req.normalized
-    }
-
-    emit('confirm', { ...entryForm })
-    handleClose()
-  } catch (error) {
-    console.error('表单验证失败:', error)
+    d.playerID = req.normalized
   }
+
+  dialogVisible.value = false
+  emit('confirm', { ...entryForm })
 }
 </script>
 
 <style scoped>
-.driver-title {
+/* ---- 主弹窗布局 ---- */
+.entry-dialog-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 720px) {
+  .entry-dialog-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.entry-left {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
+  flex-direction: column;
+  gap: 20px;
 }
 
-.drivers-actions {
-  margin-bottom: 12px;
+.entry-right {
+  background: color-mix(in srgb, var(--win11-control-bg) 40%, transparent);
+  border: 1px solid var(--win11-border);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 200px;
 }
 
-:deep(.el-form-item__label) {
-  white-space: nowrap;
-}
-
-.form-item-steamid-invalid :deep(.el-input__wrapper) {
-  box-shadow: 0 0 0 1px var(--el-color-danger) inset;
-}
-
-:deep(.collapse-driver-steamid-invalid .el-collapse-item__header) {
-  background: color-mix(in srgb, var(--el-color-danger) 10%, transparent);
-}
-
-.driver-title--steamid-invalid span:first-child {
-  color: var(--el-color-danger);
+/* ---- 区块标题 ---- */
+.entry-section-title {
+  font-size: 11px;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--win11-text-secondary);
+  margin: 0 0 12px 0;
 }
 
-.nationality-option {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35em;
+/* ---- 字段 ---- */
+.entry-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.nationality-option__flag {
-  flex-shrink: 0;
-  border-radius: 2px;
+.entry-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 
-.steamid-field-hint {
-  margin-top: 6px;
+.entry-field--row {
+  flex-direction: row;
+  gap: 12px;
+}
+
+.entry-field--row .entry-field {
+  flex: 1;
+}
+
+.entry-label {
   font-size: 12px;
-  line-height: 1.4;
+  font-weight: 500;
+  color: var(--win11-text-secondary);
 }
 
-.steamid-field-hint--warning {
-  color: var(--el-color-warning);
+.entry-label.required::after {
+  content: ' *';
+  color: rgb(var(--win11-error-text-rgb));
+}
+
+/* ---- 开关行 ---- */
+.entry-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.entry-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--win11-border) 50%, transparent);
+}
+
+.entry-toggle-row:last-child {
+  border-bottom: none;
+}
+
+.entry-toggle-label {
+  font-size: 13px;
+  color: var(--win11-text);
+}
+
+/* ---- 车手列表头部 ---- */
+.driver-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.driver-list-title-group {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.driver-list-count {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--win11-text);
+  line-height: 1;
+}
+
+.driver-list-label {
+  font-size: 12px;
+  color: var(--win11-text-secondary);
+}
+
+/* ---- 空状态 ---- */
+.driver-list-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--win11-text-secondary);
+  padding: 24px 0;
+}
+
+.driver-list-empty p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--win11-text);
+}
+
+.driver-list-empty span {
+  font-size: 11px;
+}
+
+/* ---- 车手摘要卡片 ---- */
+.driver-summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.driver-summary-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px;
+  background: var(--win11-surface);
+  border: 1px solid var(--win11-border);
+  border-radius: 8px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.driver-summary-card:hover {
+  border-color: color-mix(in srgb, var(--win11-accent) 50%, transparent);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--win11-shadow-dialog) 30%, transparent);
+}
+
+.driver-summary-card--invalid {
+  border-color: color-mix(in srgb, var(--win11-error-text-rgb) 50%, transparent);
+}
+
+.driver-summary-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--win11-accent) 15%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.driver-initial {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--win11-accent);
+}
+
+.driver-summary-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.driver-summary-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--win11-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.driver-summary-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.driver-summary-steam {
+  font-size: 11px;
+  font-family: 'Consolas', monospace;
+  color: var(--win11-text-secondary);
+}
+
+.driver-summary-steam-error {
+  font-size: 11px;
+  color: rgb(var(--win11-error-text-rgb));
+}
+
+.driver-summary-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* ---- 图标按钮 ---- */
+.icon-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--win11-icon);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.icon-btn:hover {
+  background: var(--win11-control-hover-bg);
+  color: var(--win11-text);
+}
+
+.icon-btn--danger:hover {
+  background: color-mix(in srgb, #ef4444 15%, transparent);
+  color: #ef4444;
+}
+
+/* ---- 子弹窗表单 ---- */
+.driver-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.driver-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.driver-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.driver-form-field--short {
+  max-width: 120px;
+}
+
+.driver-form-hint {
+  font-size: 11px;
+  color: rgb(var(--win11-warning-text-rgb));
+  margin: 2px 0 0 0;
 }
 </style>

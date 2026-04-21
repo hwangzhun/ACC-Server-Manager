@@ -1,6 +1,5 @@
 <template>
   <div class="bop-data-table">
-    <!-- 表格工具栏 -->
     <div class="table-toolbar">
       <div class="toolbar-left">
         <span v-if="selectedCount > 0" class="selection-info">
@@ -8,100 +7,106 @@
         </span>
       </div>
       <div class="toolbar-right">
-        <el-input
+        <Win11Input
           :model-value="searchKeyword"
           @update:model-value="$emit('update:searchKeyword', $event)"
           :placeholder="t('placeholder.search')"
           clearable
           size="small"
+          prefix-icon="search"
           style="width: 200px"
-          :prefix-icon="Search"
         />
       </div>
     </div>
 
-    <!-- 数据表格 -->
-    <el-table
-      ref="tableRef"
+    <Win11Table
       :data="entries"
-      style="width: 100%"
+      :columns="columns"
+      :show-selection="true"
+      :show-footer="true"
       height="100%"
-      highlight-current-row
-      @row-click="handleRowClick"
+      :selected="selectedRows"
       @selection-change="handleSelectionChange"
+      @row-click="handleRowClick"
     >
-      <el-table-column type="selection" width="40" align="center" />
+      <template #cell-carModel="{ row }">
+        <div class="car-cell">
+          <Win11Image
+            :src="getCarImageUrl(row.carModel)"
+            class="car-thumbnail"
+            width="44"
+            height="26"
+            fit="cover"
+          >
+            <template #error>
+              <div class="image-placeholder">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+            </template>
+          </Win11Image>
+          <div class="car-info">
+            <span class="car-name">{{ getCarName(row.carModel) }}</span>
+            <span class="car-class">{{ getCarClass(row.carModel) }}</span>
+          </div>
+        </div>
+      </template>
 
-      <el-table-column :label="t('form.carModel')" min-width="200">
-        <template #default="{ row }">
-          <div class="car-cell">
-            <el-image
-              :src="getCarImageUrl(row.carModel)"
-              class="car-thumbnail"
-              fit="cover"
-            >
-              <template #error>
-                <div class="image-placeholder">
-                  <el-icon><Picture /></el-icon>
-                </div>
-              </template>
-            </el-image>
-            <div class="car-info">
-              <span class="car-name">{{ getCarName(row.carModel) }}</span>
-              <span class="car-class">{{ getCarClass(row.carModel) }}</span>
-            </div>
-          </div>
-        </template>
-      </el-table-column>
-      <el-table-column :label="t('form.track')" width="120">
-        <template #default="{ row }">
-          <span class="track-name">{{ formatTrackName(row.track) }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column
-        :label="t('form.ballastKg')"
-        min-width="128"
-        sortable
-        label-class-name="bop-th-ballast"
-      >
-        <template #default="{ row }">
-          <div class="ballast-cell">
-            <span :class="['ballast-value', getBallastClass(row.ballastKg)]">
-              {{ row.ballastKg > 0 ? `+${row.ballastKg}` : row.ballastKg }}
-            </span>
-            <el-progress
-              :percentage="getBallastPercent(row.ballastKg)"
-              :stroke-width="6"
-              :color="getBallastColor(row.ballastKg)"
-              :show-text="false"
-            />
-          </div>
-        </template>
-      </el-table-column>
-      <el-table-column :label="t('bop.restrictor')" width="130" sortable>
-        <template #default="{ row }">
-          <div class="restrictor-cell">
-            <span class="restrictor-value">{{ row.restrictor === 0 ? t('bop.noRestriction') : String(row.restrictor) }}</span>
-            <el-progress
-              :percentage="clampAccBopRestrictor(row.restrictor) * 5"
-              :stroke-width="6"
-              :color="getRestrictorColor(row.restrictor)"
-              :show-text="false"
-            />
-          </div>
-        </template>
-      </el-table-column>
-      <el-table-column :label="t('common.operation')" width="100" fixed="right">
-        <template #default="{ row, $index }">
-          <div class="action-buttons">
-            <el-button type="primary" size="small" :icon="Edit" circle @click="handleEdit(row, $index)" />
-            <el-button type="danger" size="small" :icon="Delete" circle @click="handleDelete($index)" />
-          </div>
-        </template>
-      </el-table-column>
-    </el-table>
+      <template #cell-track="{ row }">
+        <span class="track-name">{{ formatTrackName(row.track) }}</span>
+      </template>
 
-    <!-- 表格底部统计 -->
+      <template #cell-ballastKg="{ row }">
+        <div class="ballast-cell">
+          <span :class="['ballast-value', getBallastClass(row.ballastKg)]">
+            {{ row.ballastKg > 0 ? `+${row.ballastKg}` : row.ballastKg }}
+          </span>
+          <Win11Progress
+            :percentage="getBallastPercent(row.ballastKg)"
+            :stroke-width="6"
+            :color="getBallastColor(row.ballastKg)"
+          />
+        </div>
+      </template>
+
+      <template #cell-restrictor="{ row }">
+        <div class="restrictor-cell">
+          <span class="restrictor-value">{{ row.restrictor === 0 ? t('bop.noRestriction') : String(row.restrictor) }}</span>
+          <Win11Progress
+            :percentage="clampAccBopRestrictor(row.restrictor) * 5"
+            :stroke-width="6"
+            :color="getRestrictorColor(row.restrictor)"
+          />
+        </div>
+      </template>
+
+      <template #cell-actions="{ row }">
+        <div class="action-buttons">
+          <Win11Button
+            variant="primary"
+            size="small"
+            circle
+            @click.stop="handleEdit(row as BopEntry)"
+          >
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </Win11Button>
+          <Win11Button
+            variant="danger"
+            size="small"
+            circle
+            @click.stop="handleDelete(row as BopEntry)"
+          >
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </Win11Button>
+        </div>
+      </template>
+    </Win11Table>
+
     <div class="table-footer">
       <span class="footer-info">
         {{ entries.length }} {{ t('common.items') }}
@@ -115,65 +120,72 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Search, Picture, Edit, Delete } from '@element-plus/icons-vue'
 import type { BopEntry } from '../../types/configuration'
 import { getCarImageUrl } from '../../data/mappings'
 import { clampAccBopRestrictor } from '../../utils/lfmBopService'
 import { useTrackName, getCarLocalizedName } from '../../i18n/mappings'
-import { getCarClass } from './composables/useBopFilter'
+import { getCarClass } from './utils'
 import { t } from '../../i18n'
-import type { ElTable } from 'element-plus'
+import {
+  Win11Table,
+  Win11Input,
+  Win11Image,
+  Win11Progress,
+  Win11Button
+} from '../win11'
 
-const props = defineProps<{
+defineProps<{
   entries: BopEntry[]
   selectedCount: number
   searchKeyword: string
 }>()
 
 const emit = defineEmits<{
-  (e: 'edit', entry: BopEntry, index: number): void
-  (e: 'delete', index: number): void
+  (e: 'edit', entry: BopEntry): void
+  (e: 'delete', entry: BopEntry): void
   (e: 'selectionChange', rows: BopEntry[]): void
   (e: 'update:searchKeyword', value: string): void
 }>()
 
-const tableRef = ref<InstanceType<typeof ElTable>>()
+const selectedRows = ref<Record<string, any>[]>([])
 
-// 选中行变化（el-table 原生事件）
-function handleSelectionChange(rows: BopEntry[]) {
-  emit('selectionChange', rows)
+const columns = [
+  { key: 'carModel', label: t('form.carModel'), width: '34%' },
+  { key: 'track', label: t('form.track'), width: '20%' },
+  { key: 'ballastKg', label: t('form.ballastKg'), width: '18%', sortable: true },
+  { key: 'restrictor', label: t('bop.restrictor'), width: '18%', sortable: true },
+  { key: 'actions', label: t('common.operation'), width: '10%' }
+]
+
+function handleSelectionChange(rows: Record<string, any>[]) {
+  selectedRows.value = rows
+  emit('selectionChange', rows as BopEntry[])
 }
 
-// 获取车型名称
 function getCarName(carId: number): string {
   return getCarLocalizedName(carId)
 }
 
-// 格式化赛道名称
 function formatTrackName(track: string): string {
   return useTrackName(track).value
 }
 
-// 配重样式
 function getBallastClass(ballast: number): string {
   if (ballast > 0) return 'positive'
   if (ballast < 0) return 'negative'
   return 'zero'
 }
 
-// 配重进度条百分比
 function getBallastPercent(ballast: number): number {
   return Math.abs(ballast)
 }
 
-// 配重颜色
 function getBallastColor(ballast: number): string {
   if (ballast > 0) return '#f56c6c'
   if (ballast < 0) return '#67c23a'
   return '#909399'
 }
 
-// 进气限制器颜色（0–20，越大限制越强）
 function getRestrictorColor(restrictor: number): string {
   const r = clampAccBopRestrictor(restrictor)
   if (r === 0) return '#67c23a'
@@ -181,32 +193,19 @@ function getRestrictorColor(restrictor: number): string {
   return '#f56c6c'
 }
 
-// 处理行点击
-function handleRowClick(row: BopEntry) {
-  const index = props.entries.findIndex(e =>
-    e.track === row.track && e.carModel === row.carModel
-  )
-  if (index !== -1) {
-    emit('edit', row, index)
-  }
+function handleRowClick(row: Record<string, any>) {
+  emit('edit', row as BopEntry)
 }
 
-// 处理编辑
-function handleEdit(entry: BopEntry, index: number) {
-  emit('edit', entry, index)
+function handleEdit(entry: BopEntry) {
+  emit('edit', entry)
 }
 
-// 处理删除
-function handleDelete(index: number) {
-  emit('delete', index)
+function handleDelete(entry: BopEntry) {
+  emit('delete', entry)
 }
 
-// 清空表格选择（供父组件调用）
-function clearSelection() {
-  tableRef.value?.clearSelection()
-}
-
-defineExpose({ clearSelection })
+defineExpose({ clearSelection: () => { selectedRows.value = [] } })
 </script>
 
 <style scoped>
@@ -214,7 +213,19 @@ defineExpose({ clearSelection })
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--el-bg-color);
+  background: var(--win11-surface);
+}
+
+.bop-data-table :deep(.win11-table-row .win11-table-cell) {
+  display: flex;
+  align-items: center;
+}
+
+.bop-data-table :deep(.win11-table-row .win11-table-cell:nth-child(3)),
+.bop-data-table :deep(.win11-table-row .win11-table-cell:nth-child(4)),
+.bop-data-table :deep(.win11-table-row .win11-table-cell:nth-child(5)),
+.bop-data-table :deep(.win11-table-row .win11-table-cell:nth-child(6)) {
+  justify-content: center;
 }
 
 .table-toolbar {
@@ -222,7 +233,7 @@ defineExpose({ clearSelection })
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--el-border-color-light);
+  border-bottom: 1px solid var(--win11-border);
   flex-shrink: 0;
 }
 
@@ -234,7 +245,7 @@ defineExpose({ clearSelection })
 
 .selection-info {
   font-size: 13px;
-  color: var(--el-color-primary);
+  color: var(--win11-accent);
 }
 
 .toolbar-right {
@@ -243,46 +254,34 @@ defineExpose({ clearSelection })
   gap: 8px;
 }
 
-/* 表格样式 */
-:deep(.el-table) {
-  flex: 1;
-  overflow: auto;
+.table-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--win11-border);
+  background: var(--win11-control-bg);
+  flex-shrink: 0;
 }
 
-:deep(.el-table__header) {
-  background: var(--el-fill-color-light);
+.footer-info {
+  font-size: 13px;
+  color: var(--win11-text-secondary);
 }
 
-/* 配列表头：标题 + 排序箭头不换行 */
-:deep(th.bop-th-ballast .cell) {
-  white-space: nowrap;
-}
-
-:deep(.el-table__row) {
-  cursor: pointer;
-}
-
-:deep(.el-table__row:hover) {
-  background: var(--el-fill-color-light) !important;
-}
-
-:deep(.el-table__row.current-row) {
-  background: var(--el-color-primary-light-9) !important;
-}
-
-/* 车型单元格 */
 .car-cell {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
+  width: 100%;
 }
 
 .car-thumbnail {
-  width: 60px;
-  height: 36px;
   border-radius: 4px;
   flex-shrink: 0;
-  background: var(--el-fill-color-light);
+  background: var(--win11-control-bg);
+  width: 44px;
+  min-width: 44px;
+  height: 26px;
+  overflow: hidden;
 }
 
 .image-placeholder {
@@ -291,9 +290,8 @@ defineExpose({ clearSelection })
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--el-fill-color-light);
-  color: var(--el-text-color-placeholder);
-  font-size: 16px;
+  background: var(--win11-control-bg);
+  color: var(--win11-text-secondary);
 }
 
 .car-info {
@@ -306,30 +304,31 @@ defineExpose({ clearSelection })
 .car-name {
   font-size: 13px;
   font-weight: 500;
-  color: var(--el-text-color-primary);
+  color: var(--win11-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.car-class-tag {
-  width: fit-content;
+.car-class {
   font-size: 11px;
-  height: 18px;
-  padding: 0 6px;
+  color: var(--win11-text-secondary);
 }
 
-/* 赛道文字 */
-.track-text {
+.track-name {
   font-size: 13px;
-  color: var(--el-text-color-regular);
+  color: var(--win11-text);
 }
 
-/* 数值单元格 */
-.value-cell {
+.ballast-cell,
+.restrictor-cell {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  align-items: stretch;
 }
 
 .ballast-value {
@@ -338,55 +337,25 @@ defineExpose({ clearSelection })
 }
 
 .ballast-value.positive {
-  color: #f56c6c;
+  color: rgb(var(--win11-ballast-positive-rgb));
 }
 
 .ballast-value.negative {
-  color: #67c23a;
+  color: rgb(var(--win11-ballast-negative-rgb));
 }
 
 .ballast-value.zero {
-  color: var(--el-text-color-secondary);
+  color: var(--win11-text-secondary);
 }
 
 .restrictor-value {
   font-size: 13px;
   font-weight: 500;
-  color: var(--el-text-color-primary);
+  color: var(--win11-text);
 }
 
-.value-progress {
-  width: 60px;
-}
-
-.value-progress :deep(.el-progress-bar__outer) {
-  border-radius: 2px;
-}
-
-.value-progress :deep(.el-progress-bar__inner) {
-  border-radius: 2px;
-}
-
-/* 操作按钮 */
 .action-buttons {
   display: flex;
   gap: 4px;
-}
-
-.action-buttons .el-button {
-  padding: 6px;
-}
-
-/* 表格底部 */
-.table-footer {
-  padding: 12px 16px;
-  border-top: 1px solid var(--el-border-color-light);
-  background: var(--el-fill-color-light);
-  flex-shrink: 0;
-}
-
-.footer-info {
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
 }
 </style>

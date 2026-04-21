@@ -74,9 +74,9 @@ export async function loadPreset(name: string): Promise<PresetWithData> {
 // 重命名预设
 export async function renamePreset(oldName: string, newName: string, description?: string): Promise<void> {
   await invoke('rename_preset_cmd', {
-    old_name: oldName,
-    new_name: newName,
-    new_description: description
+    oldName,
+    newName,
+    newDescription: description
   })
 }
 

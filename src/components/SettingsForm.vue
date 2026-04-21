@@ -1,147 +1,244 @@
 <template>
   <div class="settings-form">
-    <!-- 服务器基本设置 -->
-    <el-card class="section-card">
-      <template #header>
-        <h3>{{ t('nav.settings') }}</h3>
+    <Win11Card>
+      <template #title>
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-md bg-win11-accent/10 flex items-center justify-center">
+            <svg class="w-5 h-5 text-win11-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-base font-semibold text-win11-text m-0">{{ t('nav.settings') }}</h3>
+            <p class="text-xs text-win11-text-secondary m-0">{{ t('form.serverConfiguration') }}</p>
+          </div>
+        </div>
       </template>
-      <el-form :model="settings" label-width="180px">
-        <el-form-item :label="t('form.serverName')">
-          <el-input v-model="settings.serverName" :placeholder="t('placeholder.pleaseInput')" />
-          <FieldDescription config-name="settings" field-name="serverName" />
-        </el-form-item>
-        <el-form-item :label="t('form.password')">
-          <el-input v-model="settings.password" type="password" :placeholder="t('common.optional')" show-password />
-          <FieldDescription config-name="settings" field-name="password" />
-        </el-form-item>
-        <el-form-item :label="t('form.adminPassword')">
-          <el-input v-model="settings.adminPassword" type="password" :placeholder="t('placeholder.pleaseInput')" show-password />
-          <FieldDescription config-name="settings" field-name="adminPassword" />
-        </el-form-item>
-        <el-form-item :label="t('form.spectatorPassword')">
-          <el-input v-model="settings.spectatorPassword" type="password" :placeholder="t('common.optional')" show-password />
-          <FieldDescription config-name="settings" field-name="spectatorPassword" />
-        </el-form-item>
-        <el-form-item :label="t('form.carGroup')">
-          <el-select v-model="settings.carGroup" :placeholder="t('common.pleaseSelect')" filterable>
-            <el-option v-for="group in carGroups" :key="group" :label="group" :value="group" />
-          </el-select>
-          <FieldDescription config-name="settings" field-name="carGroup" />
-        </el-form-item>
-        <el-form-item :label="t('form.maxCarSlots')">
-          <el-input-number v-model="settings.maxCarSlots" :min="1" :max="60" />
-          <FieldDescription config-name="settings" field-name="maxCarSlots" />
-        </el-form-item>
-      </el-form>
-    </el-card>
 
-    <!-- 评分要求 -->
-    <el-card class="section-card">
-      <template #header>
-        <h3>{{ t('form.ratingRequirements') }}</h3>
-      </template>
-      <el-form :model="settings" label-width="180px">
-        <el-form-item :label="t('form.trackMedalsRequirement')">
-          <el-select v-model="settings.trackMedalsRequirement" :placeholder="t('common.pleaseSelect')" filterable>
-            <el-option :label="t('common.none')" :value="0" />
-            <el-option label="1" :value="1" />
-            <el-option label="2" :value="2" />
-            <el-option label="3" :value="3" />
-          </el-select>
-          <FieldDescription config-name="settings" field-name="trackMedalsRequirement" />
-        </el-form-item>
-        <el-form-item :label="t('form.safetyRatingRequirement')">
-          <el-input-number v-model="settings.safetyRatingRequirement" :min="-1" :max="99" />
-          <FieldDescription config-name="settings" field-name="safetyRatingRequirement" />
-        </el-form-item>
-        <el-form-item :label="t('form.racecraftRatingRequirement')">
-          <el-input-number v-model="settings.racecraftRatingRequirement" :min="-1" :max="99" />
-          <FieldDescription config-name="settings" field-name="racecraftRatingRequirement" />
-        </el-form-item>
-      </el-form>
-    </el-card>
+      <div class="win11-form-grid cols-2">
+        <div class="win11-form-field">
+          <label class="win11-form-label">{{ t('form.serverName') }}</label>
+          <Win11Input
+            v-model="settings.serverName"
+            :placeholder="t('placeholder.pleaseInput')"
+            :hint="serverNameHint"
+          />
+        </div>
 
-    <!-- 赛事选项 -->
-    <el-card class="section-card">
-      <template #header>
-        <h3>{{ t('form.raceOptions') }}</h3>
+        <div class="win11-form-field">
+          <label class="win11-form-label">{{ t('form.password') }}</label>
+          <Win11Input
+            v-model="settings.password"
+            type="password"
+            :placeholder="t('common.optional')"
+            :hint="passwordHint"
+          />
+        </div>
+
+        <div class="win11-form-field">
+          <label class="win11-form-label">{{ t('form.adminPassword') }}</label>
+          <Win11Input
+            v-model="settings.adminPassword"
+            type="password"
+            :placeholder="t('placeholder.pleaseInput')"
+            :hint="adminPasswordHint"
+          />
+        </div>
+
+        <div class="win11-form-field">
+          <label class="win11-form-label">{{ t('form.spectatorPassword') }}</label>
+          <Win11Input
+            v-model="settings.spectatorPassword"
+            type="password"
+            :placeholder="t('common.optional')"
+            :hint="spectatorPasswordHint"
+          />
+        </div>
+
+        <div class="win11-form-field">
+          <label class="win11-form-label">{{ t('form.carGroup') }}</label>
+          <Win11Select
+            v-model="settings.carGroup"
+            :options="carGroupOptions"
+            :hint="carGroupHint"
+          />
+        </div>
+
+        <div class="win11-form-field">
+          <label class="win11-form-label">{{ t('form.maxCarSlots') }}</label>
+          <Win11Input
+            v-model.number="settings.maxCarSlots"
+            type="number"
+            :hint="maxCarSlotsHint"
+          />
+        </div>
+      </div>
+    </Win11Card>
+
+    <Win11Card>
+      <template #title>
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-md bg-win11-accent/10 flex items-center justify-center">
+            <svg class="w-5 h-5 text-win11-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-base font-semibold text-win11-text m-0">{{ t('form.ratingRequirements') }}</h3>
+            <p class="text-xs text-win11-text-secondary m-0">{{ t('form.driverQualification') }}</p>
+          </div>
+        </div>
       </template>
-      <el-form :model="settings" label-width="220px">
-        <el-form-item :label="t('form.isRaceLocked')">
-          <el-switch v-model="settings.isRaceLocked" :active-value="1" :inactive-value="0" />
-          <FieldDescription config-name="settings" field-name="isRaceLocked" />
-        </el-form-item>
-        <el-form-item :label="t('form.isLockedPrepPhase')">
-          <el-switch v-model="settings.isLockedPrepPhase" :active-value="1" :inactive-value="0" />
-          <FieldDescription config-name="settings" field-name="isLockedPrepPhase" />
-        </el-form-item>
-        <el-form-item :label="t('form.shortFormationLap')">
-          <el-switch v-model="settings.shortFormationLap" :active-value="1" :inactive-value="0" />
-          <FieldDescription config-name="settings" field-name="shortFormationLap" />
-        </el-form-item>
-        <el-form-item :label="t('form.allowAutoDQ')">
-          <el-switch v-model="settings.allowAutoDQ" :active-value="1" :inactive-value="0" />
-          <FieldDescription config-name="settings" field-name="allowAutoDQ" />
-        </el-form-item>
-        <el-form-item :label="t('form.ignorePrematureDisconnects')">
-          <el-switch v-model="settings.ignorePrematureDisconnects" :active-value="1" :inactive-value="0" />
-          <FieldDescription config-name="settings" field-name="ignorePrematureDisconnects" />
-        </el-form-item>
-        <el-form-item :label="t('form.randomizeTrackWhenEmpty')">
-          <el-switch v-model="settings.randomizeTrackWhenEmpty" :active-value="1" :inactive-value="0" />
-          <FieldDescription config-name="settings" field-name="randomizeTrackWhenEmpty" />
-        </el-form-item>
-        <el-form-item :label="t('form.dumpLeaderboards')">
-          <el-switch v-model="settings.dumpLeaderboards" :active-value="1" :inactive-value="0" />
-          <FieldDescription config-name="settings" field-name="dumpLeaderboards" />
-        </el-form-item>
-        <el-form-item :label="t('form.dumpEntryList')">
-          <el-switch v-model="settings.dumpEntryList" :active-value="1" :inactive-value="0" />
-          <FieldDescription config-name="settings" field-name="dumpEntryList" />
-        </el-form-item>
-      </el-form>
-    </el-card>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="win11-form-field">
+          <label class="win11-form-label">{{ t('form.trackMedalsRequirement') }}</label>
+          <Win11Select
+            v-model.number="settings.trackMedalsRequirement"
+            :options="medalOptions"
+            :hint="trackMedalsHint"
+          />
+        </div>
+
+        <div class="win11-form-field">
+          <label class="win11-form-label">{{ t('form.safetyRatingRequirement') }}</label>
+          <Win11Input
+            v-model.number="settings.safetyRatingRequirement"
+            type="number"
+            :hint="safetyRatingHint"
+          />
+        </div>
+
+        <div class="win11-form-field">
+          <label class="win11-form-label">{{ t('form.racecraftRatingRequirement') }}</label>
+          <Win11Input
+            v-model.number="settings.racecraftRatingRequirement"
+            type="number"
+            :hint="racecraftRatingHint"
+          />
+        </div>
+      </div>
+    </Win11Card>
+
+    <Win11Card>
+      <template #title>
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-md bg-win11-accent/10 flex items-center justify-center">
+            <svg class="w-5 h-5 text-win11-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-base font-semibold text-win11-text m-0">{{ t('form.raceOptions') }}</h3>
+            <p class="text-xs text-win11-text-secondary m-0">{{ t('form.raceBehavior') }}</p>
+          </div>
+        </div>
+      </template>
+
+      <div class="space-y-2">
+        <div
+          v-for="(enabled, key) in toggleOptions"
+          :key="key"
+          class="win11-toggle-row"
+        >
+          <div class="win11-toggle-info">
+            <span class="win11-toggle-label">{{ getToggleLabel(key) }}</span>
+            <span class="win11-toggle-desc">{{ getToggleDescription(key) }}</span>
+          </div>
+          <Win11Toggle
+            :model-value="enabled ? 1 : 0"
+            @update:model-value="updateToggle(key, $event)"
+          />
+        </div>
+      </div>
+    </Win11Card>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { Settings } from '../types/configuration'
 import { CAR_GROUPS } from '../types/defaults'
-import FieldDescription from './FieldDescription.vue'
-import { t } from '../i18n'
+import { t, useFieldDescription, getFieldDescription } from '../i18n'
+import { Win11Card, Win11Input, Win11Select, Win11Toggle } from './win11'
 
-defineProps<{
+const props = defineProps<{
   settings: Settings
 }>()
 
-const carGroups = CAR_GROUPS
+const serverNameHint = useFieldDescription('settings', 'serverName')
+const passwordHint = useFieldDescription('settings', 'password')
+const adminPasswordHint = useFieldDescription('settings', 'adminPassword')
+const spectatorPasswordHint = useFieldDescription('settings', 'spectatorPassword')
+const carGroupHint = useFieldDescription('settings', 'carGroup')
+const maxCarSlotsHint = useFieldDescription('settings', 'maxCarSlots')
+
+const trackMedalsHint = useFieldDescription('settings', 'trackMedalsRequirement')
+const safetyRatingHint = useFieldDescription('settings', 'safetyRatingRequirement')
+const racecraftRatingHint = useFieldDescription('settings', 'racecraftRatingRequirement')
+
+const carGroupOptions = computed(() =>
+  CAR_GROUPS.map(group => ({ label: group, value: group }))
+)
+
+const medalOptions = computed(() => [
+  { label: t('common.none'), value: 0 },
+  { label: `1 ${t('common.medal')}`, value: 1 },
+  { label: `2 ${t('common.medals')}`, value: 2 },
+  { label: `3 ${t('common.medals')}`, value: 3 }
+])
+
+const toggleOptions = computed(() => ({
+  isRaceLocked: props.settings.isRaceLocked === 1,
+  isLockedPrepPhase: props.settings.isLockedPrepPhase === 1,
+  shortFormationLap: props.settings.shortFormationLap === 1,
+  allowAutoDQ: props.settings.allowAutoDQ === 1,
+  ignorePrematureDisconnects: props.settings.ignorePrematureDisconnects === 1,
+  randomizeTrackWhenEmpty: props.settings.randomizeTrackWhenEmpty === 1,
+  dumpLeaderboards: props.settings.dumpLeaderboards === 1,
+  dumpEntryList: props.settings.dumpEntryList === 1,
+}))
+
+function getToggleLabel(key: string): string {
+  return t(`form.${key}`) || key
+}
+
+function getToggleDescription(key: string): string {
+  return getFieldDescription('settings', key)
+}
+
+type ToggleKey = 'isRaceLocked' | 'isLockedPrepPhase' | 'shortFormationLap' | 'allowAutoDQ' | 'ignorePrematureDisconnects' | 'randomizeTrackWhenEmpty' | 'dumpLeaderboards' | 'dumpEntryList'
+
+function updateToggle(key: string, value: number) {
+  const toggleKey = key as ToggleKey
+  props.settings[toggleKey] = value as Settings[ToggleKey]
+}
 </script>
 
 <style scoped>
-.settings-form {
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  max-width: 800px;
-  margin: 0 auto;
+.win11-form-field {
+  @apply flex flex-col gap-2;
 }
 
-.section-card {
-  margin-bottom: 0;
+.win11-toggle-row {
+  @apply flex items-center justify-between py-3;
+  @apply border-b border-win11-border;
 }
 
-.el-form-item {
-  margin-bottom: 18px;
+.win11-toggle-row:last-child {
+  @apply border-b-0;
 }
 
-.section-card :deep(h3) {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
+.win11-toggle-info {
+  @apply flex flex-col gap-1;
 }
 
-:deep(.field-description) {
-  margin-left: 8px;
+.win11-toggle-label {
+  @apply text-sm text-win11-text;
+}
+
+.win11-toggle-desc {
+  @apply text-xs text-win11-text-secondary;
 }
 </style>

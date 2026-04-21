@@ -1,0 +1,5 @@
+export { default as TechInput } from './TechInput.vue'
+export { default as TechSelect } from './TechSelect.vue'
+export { default as TechSwitch } from './TechSwitch.vue'
+export { default as TechSlider } from './TechSlider.vue'
+export { default as TechButton } from './TechButton.vue'

@@ -16,6 +16,11 @@
     "fs:allow-exists",
     "dialog:allow-open",
     "dialog:allow-save",
-    "dialog:allow-message"
+    "dialog:allow-message",
+    "core:window:allow-close",
+    "core:window:allow-minimize",
+    "core:window:allow-maximize",
+    "core:window:allow-unmaximize",
+    "core:window:allow-is-maximized"
   ]
 }

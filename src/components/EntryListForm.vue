@@ -1,475 +1,318 @@
 <template>
   <div class="entry-list-form">
-    <!-- 顶部工具栏 -->
-    <div class="toolbar">
-      <div class="toolbar-left">
-        <el-input
-          v-model="searchKeyword"
-          :placeholder="t('placeholder.searchEntry')"
-          clearable
-          class="search-input"
-          :prefix-icon="Search"
-        />
-        <el-select v-model="sortBy" :placeholder="t('common.sortBy')" class="sort-select" filterable>
-          <el-option :label="t('sortOptions.teamName')" value="teamName" />
-          <el-option :label="t('sortOptions.raceNumber')" value="raceNumber" />
-          <el-option :label="t('sortOptions.driverCount')" value="driverCount" />
-        </el-select>
-        <el-button :icon="sortOrder === 'asc' ? SortUp : SortDown" @click="toggleSortOrder">
-        </el-button>
-      </div>
-      <div class="toolbar-right">
-        <el-button v-if="selectedEntries.length > 0" type="danger" :icon="Delete" @click="handleBatchDelete">
-          {{ t('common.deleteSelected') }} ({{ selectedEntries.length }})
-        </el-button>
-        <el-dropdown trigger="click" @command="handleToolbarCommand">
-          <el-button :icon="FolderOpened">{{ t('common.importExport') }}</el-button>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="importCsv" :icon="Upload">{{ t('common.importCsv') }}</el-dropdown-item>
-              <el-dropdown-item command="exportCsv" :icon="Download" divided>{{ t('common.exportCsv') }}</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
-        <el-button type="primary" :icon="Plus" @click="dialogVisible = true">
-          {{ t('common.addTeam') }}
-        </el-button>
-      </div>
-    </div>
+    <Win11Card>
+      <template #title>
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-md bg-win11-accent/10 flex items-center justify-center">
+            <svg class="w-5 h-5 text-win11-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-base font-semibold text-win11-text m-0">{{ t('nav.entryList') }}</h3>
+            <p class="text-xs text-win11-text-secondary m-0">Grid Management</p>
+          </div>
+        </div>
+      </template>
 
-    <!-- 参赛名单全局：仅名单内车手可进服 -->
-    <div class="entrylist-global-bar">
-      <el-tooltip :content="t('description.forceEntryList')" placement="bottom-start">
-        <label class="force-entry-row">
-          <span class="force-entry-label">{{ t('form.forceEntryList') }}</span>
-          <el-switch
-            v-model="forceEntryListModel"
-            :active-value="1"
-            :inactive-value="0"
-            inline-prompt
-            :active-text="t('common.on')"
-            :inactive-text="t('common.off')"
+      <div class="space-y-6">
+        <div class="win11-toolbar">
+          <div class="win11-toolbar-left">
+            <Win11Input
+              v-model="searchKeyword"
+              :placeholder="t('placeholder.searchEntry')"
+            />
+            <Win11Select
+              v-model="sortBy"
+              :options="sortOptions"
+              :placeholder="t('common.sortBy')"
+            />
+            <Win11Button variant="secondary" @click="toggleSortOrder">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+              </svg>
+            </Win11Button>
+          </div>
+
+          <div class="win11-toolbar-right">
+            <Win11Button
+              v-if="selectedEntries.length > 0"
+              variant="danger"
+              @click="handleBatchDelete"
+            >
+              {{ t('common.deleteCount').replace('{count}', selectedEntries.length.toString()) }}
+            </Win11Button>
+            <Win11Button variant="secondary" @click="showImportMenu = !showImportMenu">
+              {{ t('common.importExport') }}
+            </Win11Button>
+            <Win11Button variant="primary" @click="dialogVisible = true">
+              {{ t('common.addTeam') }}
+            </Win11Button>
+          </div>
+        </div>
+
+        <div class="win11-toggle-row">
+          <div class="win11-toggle-info">
+            <span class="win11-toggle-label">{{ t('form.forceEntryList') }}</span>
+            <span class="win11-toggle-desc">{{ t('description.forceEntryList') }}</span>
+          </div>
+          <Win11Toggle
+            :model-value="forceEntryListModel === 1"
+            @update:model-value="forceEntryListModel = $event ? 1 : 0"
           />
-        </label>
-      </el-tooltip>
-    </div>
+        </div>
 
-    <!-- 统计信息 -->
-    <div class="stats-bar" v-if="filteredEntries.length > 0">
-      <el-tag>{{ t('common.totalTeams') }}: {{ filteredEntries.length }}</el-tag>
-      <el-tag type="success">{{ t('common.totalDrivers') }}: {{ totalDrivers }}</el-tag>
-      <el-tag type="info" v-if="searchKeyword">{{ t('common.searchFilter') }}: "{{ searchKeyword }}"</el-tag>
-    </div>
+        <div v-if="filteredEntries.length > 0" class="flex gap-2 flex-wrap">
+          <div class="win11-stat-tag">
+            <span class="font-semibold">{{ filteredEntries.length }}</span> {{ t('common.teams') }}
+          </div>
+          <div class="win11-stat-tag">
+            <span class="font-semibold">{{ totalDrivers }}</span> {{ t('common.drivers') }}
+          </div>
+          <div v-if="searchKeyword" class="win11-stat-tag">
+            {{ t('common.searchLabel').replace('{keyword}', searchKeyword) }}
+          </div>
+        </div>
 
-    <!-- 车队卡片网格 -->
-    <div v-if="filteredEntries.length > 0" class="entries-grid">
-      <el-card
-        v-for="(entry, index) in filteredEntries"
-        :key="index"
-        class="entry-card"
-        :class="{ 'is-selected': isSelected(entry) }"
-        shadow="hover"
-      >
-        <template #header>
-          <div class="card-header">
-            <div class="header-left">
-              <el-checkbox
-                :model-value="isSelected(entry)"
-                @change="(val: boolean) => toggleSelection(entry, val)"
+        <div v-if="filteredEntries.length > 0" class="entries-grid">
+          <div
+            v-for="(entry, index) in filteredEntries"
+            :key="`${entry.teamName}-${entry.raceNumber}-${entry.defaultGridPosition}`"
+            class="win11-entry-card"
+            :class="{ 'is-selected': isSelected(entry) }"
+          >
+            <div class="entry-card-header">
+              <input
+                type="checkbox"
+                :checked="isSelected(entry)"
+                @change="(e) => toggleSelection(entry, (e.target as HTMLInputElement).checked)"
+                class="win11-checkbox"
               />
               <span class="race-number">#{{ entry.raceNumber }}</span>
               <div class="team-info">
-                <el-input
+                <input
                   v-if="editingTeamName === entry"
                   v-model="entry.teamName"
-                  size="small"
+                  class="win11-input team-name-input"
                   @blur="editingTeamName = null"
                   @keyup.enter="editingTeamName = null"
-                  ref="teamNameInput"
                 />
-                <div v-else class="team-name-row">
-                  <span
-                    class="team-name"
-                    @click="startEditingTeamName(entry)"
-                    :title="t('common.clickToEdit')"
-                  >
-                    {{ entry.teamName || t('common.unnamedTeam') }}
-                    <el-icon class="edit-icon"><Edit /></el-icon>
-                  </span>
-                  <span v-if="entry.forcedCarModel > -1" class="car-model-badge">{{ getCarLocalizedName(entry.forcedCarModel) }}</span>
-                </div>
-              </div>
-            </div>
-            <div class="header-right">
-              <el-tag v-if="entry.isServerAdmin" type="danger" size="small" effect="dark">{{ t('common.admin') }}</el-tag>
-              <el-dropdown trigger="click" @command="(cmd: string) => handleCommand(cmd, entry, index)">
-                <el-button type="primary" size="small" circle>
-                  <el-icon><More /></el-icon>
-                </el-button>
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item command="edit">{{ t('common.editTeam') }}</el-dropdown-item>
-                    <el-dropdown-item command="addDriver">{{ t('common.addDriver') }}</el-dropdown-item>
-                    <el-dropdown-item command="duplicate">{{ t('common.duplicate') }}</el-dropdown-item>
-                    <el-dropdown-item divided command="delete" type="danger">{{ t('common.deleteTeam') }}</el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
-            </div>
-          </div>
-        </template>
-
-        <!-- 车队附加信息 -->
-        <div class="entry-meta-row">
-          <label class="meta-switch">
-            <span class="meta-label">{{ t('form.overrideDriverInfo') }}</span>
-            <el-switch v-model="entry.overrideDriverInfo" :active-value="1" :inactive-value="0" size="small" @click.stop />
-          </label>
-          <span v-if="entry.ballastKg > 0" class="meta-item">{{ t('form.ballastKg') }} {{ entry.ballastKg }}kg</span>
-          <span v-if="entry.restrictor < 100" class="meta-item">{{ t('form.restrictor') }} {{ entry.restrictor }}%</span>
-        </div>
-
-        <!-- 车手列表 -->
-        <div class="drivers-section">
-          <div class="drivers-list">
-            <div
-              v-for="(driver, driverIndex) in entry.drivers"
-              :key="driverIndex"
-              :class="[
-                'driver-item',
-                `driver-cat-${driver.driverCategory}`,
-                { 'driver-steamid-invalid': isDriverSteamIdInvalid(driver.playerID) },
-              ]"
-              :title="
-                isDriverSteamIdInvalid(driver.playerID)
-                  ? steamIdListItemTitle(driver.playerID)
-                  : undefined
-              "
-              @click="editDriver(entry, driver, driverIndex)"
-            >
-              <div class="driver-info">
-                <div class="driver-name-row">
-                  <span :class="['category-pill', `cat-${driver.driverCategory}`]">{{ getCategoryName(driver.driverCategory) }}</span>
-                  <span class="driver-name">{{ driver.firstName }} {{ driver.lastName }}</span>
-                  <span v-if="driver.shortName" class="short-name">{{ driver.shortName }}</span>
-                  <NationalityLabel class="driver-nationality" :nationality-id="driver.nationality" />
-                </div>
-                <div
-                  v-if="driver.playerID"
-                  class="driver-id"
-                  :class="{ 'driver-id--invalid': isDriverSteamIdInvalid(driver.playerID) }"
+                <span
+                  v-else
+                  class="team-name"
+                  @click="startEditingTeamName(entry)"
                 >
-                  {{ driver.playerID }}
-                </div>
+                  {{ entry.teamName || t('common.unnamedTeam') }}
+                </span>
+                <span v-if="entry.forcedCarModel > -1" class="car-model-badge">
+                  {{ getCarLocalizedName(entry.forcedCarModel) }}
+                </span>
               </div>
-              <el-button
-                type="danger"
-                size="small"
-                circle
-                class="delete-driver-btn"
-                @click.stop="removeDriverFromEntry(entry, driverIndex)"
+              <div class="entry-actions">
+                <button class="win11-icon-btn" @click="handleCommand('edit', entry, index)">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+                <button class="win11-icon-btn danger" @click="handleCommand('delete', entry, index)">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="drivers-list">
+              <div
+                v-for="(driver, driverIndex) in entry.drivers"
+                :key="driverIndex"
+                class="win11-driver-item"
+                @click="editDriver(entry, driver, driverIndex)"
               >
-                <el-icon><Delete /></el-icon>
-              </el-button>
+                <span :class="['category-pill', `cat-${driver.driverCategory}`]">
+                  {{ getCategoryName(driver.driverCategory) }}
+                </span>
+                <span class="driver-name">{{ driver.firstName }} {{ driver.lastName }}</span>
+                <span class="driver-id">{{ driver.playerID }}</span>
+                <button
+                  class="win11-icon-btn danger"
+                  @click.stop="removeDriverFromEntry(entry, driverIndex)"
+                >
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <button
+                v-if="entry.drivers.length < 5"
+                class="win11-add-driver-btn"
+                @click="addDriverToEntry(entry)"
+              >
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                {{ t('common.addDriver') }}
+              </button>
             </div>
           </div>
-          <el-button
-            v-if="entry.drivers.length < 5"
-            type="primary"
-            size="small"
-            text
-            class="add-driver-btn"
-            @click="addDriverToEntry(entry)"
-          >
-            <el-icon><Plus /></el-icon> {{ t('common.addDriver') }}
-          </el-button>
         </div>
-      </el-card>
-    </div>
 
-    <!-- 空状态 -->
-    <el-empty v-else :description="t('common.noEntryList')" class="empty-state">
-      <template #image>
-        <el-icon :size="80" color="#909399"><User /></el-icon>
-      </template>
-      <el-button type="primary" :icon="Plus" @click="dialogVisible = true">{{ t('common.addTeam') }}</el-button>
-      <el-button :icon="Upload" @click="showCsvUpload = true">{{ t('common.importCsv') }}</el-button>
-    </el-empty>
+        <div v-else class="win11-empty-state">
+          <svg class="w-16 h-16 text-win11-text-secondary mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+          <p class="text-win11-text-secondary mb-4">{{ t('common.noEntryList') }}</p>
+          <div class="flex gap-2">
+            <Win11Button variant="primary" @click="dialogVisible = true">{{ t('common.addTeam') }}</Win11Button>
+            <Win11Button variant="secondary" @click="showCsvUpload = true">{{ t('common.importCsv') }}</Win11Button>
+          </div>
+        </div>
+      </div>
+    </Win11Card>
 
-    <!-- CSV导入对话框 -->
-    <el-dialog
+    <Win11Dialog
       v-model="showCsvUpload"
-      :title="t('title.importCsv')"
+      :title="t('common.importCsv')"
       width="600px"
     >
-      <el-alert
-        :title="t('description.csvFormat')"
-        type="info"
-        :closable="false"
-        style="margin-bottom: 20px;"
-      />
-      <el-upload
-        ref="uploadRef"
-        drag
+      <div class="mb-4 p-4 rounded-lg bg-win11-control-bg border border-win11-border">
+        <p class="text-sm text-win11-text-secondary">{{ t('common.importCsvFormat') }}</p>
+      </div>
+      <input
+        type="file"
         accept=".csv,.txt"
-        :auto-upload="false"
-        :on-change="handleCsvFileChange"
-        :limit="1"
-      >
-        <el-icon :size="50"><UploadFilled /></el-icon>
-        <div class="el-upload__text">
-          {{ t('description.dragDrop') }}
+        @change="handleCsvFileChange"
+        class="win11-file-input"
+      />
+      <div class="mt-4">
+        <label class="flex items-center gap-2">
+          <input type="checkbox" v-model="mergeWithExisting" class="win11-checkbox" />
+          <span class="text-sm text-win11-text">{{ t('common.mergeWithExisting') }}</span>
+        </label>
+      </div>
+    </Win11Dialog>
+
+    <Win11Dialog
+      v-model="showImportMenu"
+      :title="t('common.importExport')"
+      width="500px"
+    >
+      <div class="space-y-4">
+        <div class="win11-form-field">
+          <label class="win11-form-label">{{ t('common.importJson') }}</label>
+          <input
+            type="file"
+            accept=".json"
+            @change="handleJsonFileChange"
+            class="win11-file-input"
+          />
         </div>
-      </el-upload>
-      
-      <el-checkbox v-model="mergeWithExisting" style="margin-top: 20px;">
-        {{ t('common.mergeWithExisting') }}
-      </el-checkbox>
+        <div class="win11-form-field">
+          <label class="win11-form-label">{{ t('common.exportJson') }}</label>
+          <Win11Button variant="secondary" @click="handleExportJson">
+            {{ t('common.exportJson') }}
+          </Win11Button>
+        </div>
+        <div class="win11-form-field">
+          <label class="win11-form-label">{{ t('common.exportCsv') }}</label>
+          <Win11Button variant="secondary" @click="handleExportCsv">
+            {{ t('common.exportCsv') }}
+          </Win11Button>
+        </div>
+      </div>
+    </Win11Dialog>
 
-      <template #footer>
-        <el-button @click="showCsvUpload = false">{{ t('common.cancel') }}</el-button>
-        <el-button type="primary" @click="handleCsvUpload" :loading="csvUploading">
-          {{ t('common.confirm') }}
-        </el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 添加/编辑车队对话框 -->
     <EntryDialog
       v-model:visible="dialogVisible"
       :edit-entry="editingEntry"
       @confirm="handleDialogConfirm"
     />
-
-    <!-- 编辑车手对话框 -->
-    <el-dialog
-      v-model="driverDialogVisible"
-      :title="t('common.editDriver')"
-      width="600px"
-    >
-      <el-form v-if="editingDriver" :model="editingDriver" label-width="100px">
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item :label="t('form.firstName')">
-              <el-input v-model="editingDriver.firstName" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item :label="t('form.lastName')">
-              <el-input v-model="editingDriver.lastName" @blur="onEditDriverLastNameBlur" />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item
-              :label="t('form.playerId')"
-              :class="{ 'form-item-steamid-invalid': isDriverSteamIdInvalid(editingDriver.playerID) }"
-            >
-              <el-input
-                v-model="editingDriver.playerID"
-                :placeholder="t('placeholder.steamId')"
-                maxlength="20"
-                @blur="onEditPlayerIdBlur"
-              />
-              <div
-                v-if="isSteamIdTooShort(editingDriver.playerID)"
-                class="steamid-field-hint steamid-field-hint--warning"
-              >
-                {{ steamIdTooShortLabel(editingDriver.playerID) }}
-              </div>
-              <div
-                v-else-if="isSteamIdTooLong(editingDriver.playerID)"
-                class="steamid-field-hint steamid-field-hint--warning"
-              >
-                {{ steamIdTooLongLabel(editingDriver.playerID) }}
-              </div>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item :label="t('form.shortName')">
-              <el-input
-                :model-value="editingDriver.shortName"
-                maxlength="3"
-                show-word-limit
-                @update:model-value="updateEditingShortName"
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item :label="t('common.category')">
-              <el-select v-model="editingDriver.driverCategory" :placeholder="t('common.pleaseSelect')" filterable style="width: 100%;">
-                <el-option
-                  v-for="level in driverLevelOptions"
-                  :key="level.value"
-                  :label="level.label"
-                  :value="level.value"
-                />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item :label="t('form.nationality')">
-              <el-select v-model="editingDriver.nationality" :placeholder="t('common.pleaseSelect')" filterable style="width: 100%;">
-                <el-option
-                  v-for="nation in nationalitySelectOptions"
-                  :key="nation.value"
-                  :label="nation.name"
-                  :value="nation.value"
-                >
-                  <span class="nationality-option">
-                    <span
-                      v-if="nation.flagIso"
-                      class="fi nationality-option__flag"
-                      :class="`fi-${nation.flagIso}`"
-                    />
-                    <span>{{ nation.name }}</span>
-                  </span>
-                </el-option>
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
-      </el-form>
-      <template #footer>
-        <el-button @click="driverDialogVisible = false">{{ t('common.cancel') }}</el-button>
-        <el-button type="primary" @click="saveDriverEdit">{{ t('common.save') }}</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
-import {
-  Delete,
-  Plus,
-  Upload,
-  Download,
-  FolderOpened,
-  UploadFilled,
-  Search,
-  SortUp,
-  SortDown,
-  Edit,
-  More,
-  User
-} from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox, type UploadFile } from 'element-plus'
+import { ref, computed } from 'vue'
 import type { EntryList, Entry, Driver } from '../types/configuration'
-import { parseCSV, mergeEntryLists } from '../utils/csvParser'
-import {
-  defaultShortNameFromLastName,
-  normalizeShortNameInput,
-} from '../utils/driverShortName'
-import {
-  getSteamIdDigitCount,
-  isDriverSteamIdInvalid,
-  isSteamIdTooLong,
-  isSteamIdTooShort,
-  normalizeSteamId,
-  requireValidSteamIdForDriver,
-  steamIdsEqual,
-} from '../utils/steamId'
-import EntryDialog from './EntryDialog.vue'
-import NationalityLabel from './NationalityLabel.vue'
-import { getCategoryName, driverCategories } from '../data/mappings'
 import { t } from '../i18n'
-import { getNationalitySelectOptionsI18n, getCarLocalizedName } from '../i18n/mappings'
+import { Win11Card, Win11Input, Win11Select, Win11Toggle, Win11Button, Win11Dialog } from './win11'
+import { parseCSV } from '../utils/csvParser'
+import EntryDialog from './EntryDialog.vue'
 
 const props = defineProps<{
   entryList: EntryList
 }>()
 
+const emit = defineEmits<{
+  'update:entryList': [value: EntryList]
+}>()
+
+const searchKeyword = ref('')
+const sortBy = ref('teamName')
+const sortOrder = ref<'asc' | 'desc'>('asc')
+const showImportMenu = ref(false)
+const showCsvUpload = ref(false)
+const mergeWithExisting = ref(false)
+const dialogVisible = ref(false)
+const editingEntry = ref<Entry | null>(null)
+const editingDriver = ref<Driver | null>(null)
+const editingDriverEntry = ref<Entry | null>(null)
+const editingDriverIndex = ref<number>(0)
+const editingTeamName = ref<Entry | null>(null)
+const selectedEntries = ref<Entry[]>([])
+
+const sortOptions = [
+  { value: 'teamName', label: t('common.teamNameLabel') },
+  { value: 'raceNumber', label: t('common.raceNumberLabel') },
+  { value: 'driverCount', label: t('common.driverCountLabel') }
+]
+
 const forceEntryListModel = computed({
-  get: () => (props.entryList.forceEntryList ?? 0) as 0 | 1,
-  set: (v: number) => {
-    props.entryList.forceEntryList = v ? 1 : 0
-  },
+  get: () => props.entryList.forceEntryList,
+  set: (val) => {
+    props.entryList.forceEntryList = val
+    emit('update:entryList', props.entryList)
+  }
 })
 
-// ============ 响应式数据 ============
-const searchKeyword = ref('')
-const sortBy = ref('raceNumber')
-const sortOrder = ref<'asc' | 'desc'>('asc')
-const selectedEntries = ref<Entry[]>([])
-const showCsvUpload = ref(false)
-const dialogVisible = ref(false)
-const csvUploading = ref(false)
-const mergeWithExisting = ref(true)
-const selectedCsvFile = ref<File | null>(null)
-const uploadRef = ref()
-const editingTeamName = ref<Entry | null>(null)
-const teamNameInput = ref<HTMLInputElement>()
-const editingEntry = ref<Entry | null>(null)
-
-// 车手编辑相关
-const driverDialogVisible = ref(false)
-const editingDriver = ref<Driver | null>(null)
-const editingDriverIndex = ref<number>(-1)
-const editingDriverEntry = ref<Entry | null>(null)
-
-const driverLevelOptions = Object.entries(driverCategories)
-  .map(([value, label]) => ({
-    value: Number(value),
-    label: `${value} - ${label}`,
-  }))
-  .sort((a, b) => a.value - b.value)
-
-const nationalitySelectOptions = computed(() => getNationalitySelectOptionsI18n())
-
-// ============ 计算属性 ============
-// 筛选和排序后的列表
 const filteredEntries = computed(() => {
-  let result = [...props.entryList.entries]
+  let entries = [...props.entryList.entries]
   
-  // 搜索筛选
   if (searchKeyword.value) {
     const keyword = searchKeyword.value.toLowerCase()
-    result = result.filter(entry => {
-      // 搜索车队名称
-      if (entry.teamName?.toLowerCase().includes(keyword)) return true
-      // 搜索赛车号码
-      if (entry.raceNumber.toString().includes(keyword)) return true
-      // 搜索车手
-      return entry.drivers.some(driver =>
-        driver.firstName?.toLowerCase().includes(keyword) ||
-        driver.lastName?.toLowerCase().includes(keyword) ||
-        driver.playerID?.toLowerCase().includes(keyword) ||
-        driver.shortName?.toLowerCase().includes(keyword)
+    entries = entries.filter(e => 
+      e.teamName.toLowerCase().includes(keyword) ||
+      e.raceNumber.toString().includes(keyword) ||
+      e.drivers.some(d => 
+        d.firstName.toLowerCase().includes(keyword) ||
+        d.lastName.toLowerCase().includes(keyword) ||
+        d.playerID.toLowerCase().includes(keyword)
       )
-    })
+    )
   }
-  
-  // 排序
-  result.sort((a, b) => {
+
+  entries.sort((a, b) => {
     let comparison = 0
-    switch (sortBy.value) {
-      case 'teamName':
-        comparison = (a.teamName || '').localeCompare(b.teamName || '')
-        break
-      case 'raceNumber':
-        comparison = a.raceNumber - b.raceNumber
-        break
-      case 'driverCount':
-        comparison = a.drivers.length - b.drivers.length
-        break
+    if (sortBy.value === 'teamName') {
+      comparison = a.teamName.localeCompare(b.teamName)
+    } else if (sortBy.value === 'raceNumber') {
+      comparison = a.raceNumber - b.raceNumber
+    } else if (sortBy.value === 'driverCount') {
+      comparison = a.drivers.length - b.drivers.length
     }
     return sortOrder.value === 'asc' ? comparison : -comparison
   })
-  
-  return result
+
+  return entries
 })
 
-// 车手总数
 const totalDrivers = computed(() => {
   return filteredEntries.value.reduce((sum, entry) => sum + entry.drivers.length, 0)
 })
 
-// ============ 方法 ============
-// 批量选择相关
+function toggleSortOrder() {
+  sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+}
+
 function isSelected(entry: Entry): boolean {
   return selectedEntries.value.includes(entry)
 }
@@ -480,779 +323,371 @@ function toggleSelection(entry: Entry, selected: boolean) {
       selectedEntries.value.push(entry)
     }
   } else {
-    const index = selectedEntries.value.indexOf(entry)
-    if (index > -1) {
-      selectedEntries.value.splice(index, 1)
-    }
+    selectedEntries.value = selectedEntries.value.filter(e => e !== entry)
   }
 }
 
 function handleBatchDelete() {
-  if (selectedEntries.value.length === 0) return
-  
-  ElMessageBox.confirm(
-    t('common.confirmBatchDelete').replace('{count}', selectedEntries.value.length.toString()),
-    t('common.batchDelete'),
-    {
-      confirmButtonText: t('common.confirm'),
-      cancelButtonText: t('common.cancel'),
-      type: 'warning'
+  selectedEntries.value.forEach(entry => {
+    const index = props.entryList.entries.indexOf(entry)
+    if (index > -1) {
+      props.entryList.entries.splice(index, 1)
     }
-  ).then(() => {
-    // 从 entryList 中删除选中的车队
-    props.entryList.entries = props.entryList.entries.filter(
-      entry => !selectedEntries.value.includes(entry)
-    )
-    selectedEntries.value = []
-    ElMessage.success(t('common.batchDeleteSuccess'))
   })
+  selectedEntries.value = []
+  emit('update:entryList', props.entryList)
 }
 
-// 工具栏命令
-function handleToolbarCommand(command: string) {
-  switch (command) {
-    case 'importCsv':
-      showCsvUpload.value = true
-      break
-    case 'exportCsv':
-      handleExportCsv()
-      break
-  }
-}
-
-// 排序相关
-function toggleSortOrder() {
-  sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
-}
-
-// 车队名称编辑
 function startEditingTeamName(entry: Entry) {
   editingTeamName.value = entry
-  nextTick(() => {
-    teamNameInput.value?.focus()
-  })
 }
 
-// 命令处理（下拉菜单）
-function handleCommand(command: string, entry: Entry, index: number) {
-  switch (command) {
-    case 'edit':
-      editingEntry.value = entry
-      dialogVisible.value = true
-      break
-    case 'addDriver':
-      addDriverToEntry(entry)
-      break
-    case 'duplicate':
-      duplicateEntry(entry)
-      break
-    case 'delete':
-      deleteEntry(index)
-      break
+function getCarLocalizedName(carModel: number): string {
+  return t('common.carModel') + ' ' + carModel
+}
+
+function getCategoryName(category: number): string {
+  const categories: Record<number, string> = {
+    0: t('common.categoryPlat'),
+    1: t('common.categoryGold'),
+    2: t('common.categorySilver'),
+    3: t('common.categoryBronze')
   }
+  return categories[category] || t('common.categoryUnknown')
 }
 
-// 删除车队
-function deleteEntry(index: number) {
-  const entry = props.entryList.entries[index]
-  ElMessageBox.confirm(
-    `${t('common.confirmDeleteTeam')} "${entry.teamName || t('common.unnamedTeam')}"?`,
-    t('common.deleteTeam'),
-    {
-      confirmButtonText: t('common.confirm'),
-      cancelButtonText: t('common.cancel'),
-      type: 'warning'
-    }
-  ).then(() => {
-    props.entryList.entries.splice(index, 1)
-    ElMessage.success(t('common.teamDeleted'))
-  })
+function editDriver(entry: Entry, driver: Driver, index: number) {
+  editingDriver.value = { ...driver }
+  editingDriverEntry.value = entry
+  editingDriverIndex.value = index
 }
 
-// 复制车队
-function duplicateEntry(entry: Entry) {
-  const newEntry: Entry = {
-    ...entry,
-    teamName: `${entry.teamName || t('common.unnamed')} (${t('common.duplicate')})`,
-    raceNumber: entry.raceNumber + 1,
-    drivers: entry.drivers.map(d => ({ ...d }))
-  }
-  props.entryList.entries.push(newEntry)
-  ElMessage.success(t('common.teamDuplicated'))
+function removeDriverFromEntry(entry: Entry, driverIndex: number) {
+  entry.drivers.splice(driverIndex, 1)
+  emit('update:entryList', props.entryList)
 }
 
-// 添加车手到车队
 function addDriverToEntry(entry: Entry) {
-  if (entry.drivers.length >= 5) {
-    ElMessage.warning(t('common.maxDriversPerTeam'))
-    return
-  }
   entry.drivers.push({
-    driverCategory: 0,
-    firstName: '',
-    lastName: '',
+    firstName: 'New',
+    lastName: 'Driver',
     playerID: '',
     shortName: '',
+    driverCategory: 2,
     nationality: 0
   })
-  // 打开编辑对话框
-  const newIndex = entry.drivers.length - 1
-  editDriver(entry, entry.drivers[newIndex], newIndex)
+  emit('update:entryList', props.entryList)
 }
 
-// 从车队移除车手
-function removeDriverFromEntry(entry: Entry, driverIndex: number) {
-  ElMessageBox.confirm(t('common.confirmDeleteDriver'), t('common.tip'), {
-    confirmButtonText: t('common.confirm'),
-    cancelButtonText: t('common.cancel'),
-    type: 'warning'
-  }).then(() => {
-    entry.drivers.splice(driverIndex, 1)
-    ElMessage.success(t('common.driverDeleted'))
-  })
-}
-
-// 编辑车手
-function editDriver(entry: Entry, driver: Driver, driverIndex: number) {
-  editingDriver.value = { ...driver }
-  editingDriverIndex.value = driverIndex
-  editingDriverEntry.value = entry
-  driverDialogVisible.value = true
-}
-
-function onEditDriverLastNameBlur() {
-  const d = editingDriver.value
-  if (!d) return
-  if (!d.shortName?.trim()) {
-    d.shortName = defaultShortNameFromLastName(d.lastName)
-  }
-}
-
-function updateEditingShortName(v: string) {
-  const d = editingDriver.value
-  if (d) d.shortName = normalizeShortNameInput(v)
-}
-
-function steamIdTooShortLabel(pid: string | undefined) {
-  return t('message.steamIdTooShort').replace(
-    '{count}',
-    String(getSteamIdDigitCount(pid))
-  )
-}
-
-function steamIdTooLongLabel(pid: string | undefined) {
-  return t('message.steamIdTooLong').replace(
-    '{count}',
-    String(getSteamIdDigitCount(pid))
-  )
-}
-
-function steamIdSaveErrorMessage(pid: string): string {
-  if (isSteamIdTooShort(pid)) return steamIdTooShortLabel(pid)
-  if (isSteamIdTooLong(pid)) return steamIdTooLongLabel(pid)
-  return t('message.invalidSteamId')
-}
-
-/** 列表上车手卡片悬停提示（与保存校验文案一致） */
-function steamIdListItemTitle(pid: string | undefined): string {
-  return steamIdSaveErrorMessage(normalizeSteamId(pid || ''))
-}
-
-function onEditPlayerIdBlur() {
-  const d = editingDriver.value
-  if (!d) return
-  d.playerID = normalizeSteamId(d.playerID || '')
-  const pid = d.playerID
-  if (isSteamIdTooShort(pid)) {
-    ElMessage.warning(steamIdTooShortLabel(pid))
-  } else if (isSteamIdTooLong(pid)) {
-    ElMessage.warning(steamIdTooLongLabel(pid))
-  }
-}
-
-// 保存车手编辑
-function saveDriverEdit() {
-  if (!editingDriver.value || editingDriverEntry.value === null || editingDriverIndex.value === -1) return
-
-  const d = editingDriver.value
-  if (!d.shortName?.trim()) {
-    d.shortName = defaultShortNameFromLastName(d.lastName)
-  }
-  d.shortName = normalizeShortNameInput(d.shortName || '')
-  const req = requireValidSteamIdForDriver(d.playerID)
-  if (!req.ok) {
-    if (req.reason === 'empty') {
-      ElMessage.error(t('message.steamIdRequired'))
-    } else {
-      d.playerID = req.normalized
-      ElMessage.error(steamIdSaveErrorMessage(d.playerID))
+function handleCommand(command: string, entry: Entry, _index: number) {
+  if (command === 'edit') {
+    editingEntry.value = entry
+    dialogVisible.value = true
+  } else if (command === 'delete') {
+    const entryIndex = props.entryList.entries.indexOf(entry)
+    if (entryIndex > -1) {
+      props.entryList.entries.splice(entryIndex, 1)
+      emit('update:entryList', props.entryList)
     }
-    return
-  }
-  d.playerID = req.normalized
-
-  editingDriverEntry.value.drivers[editingDriverIndex.value] = { ...d }
-  driverDialogVisible.value = false
-  editingDriver.value = null
-  editingDriverIndex.value = -1
-  editingDriverEntry.value = null
-  ElMessage.success(t('common.updateSuccess'))
-}
-
-// CSV导入相关
-function handleCsvFileChange(file: UploadFile) {
-  if (file.raw) {
-    selectedCsvFile.value = file.raw
+  } else if (command === 'duplicate') {
+    const newEntry = JSON.parse(JSON.stringify(entry))
+    props.entryList.entries.push(newEntry)
+    emit('update:entryList', props.entryList)
+  } else if (command === 'addDriver') {
+    addDriverToEntry(entry)
   }
 }
 
-async function handleCsvUpload() {
-  if (!selectedCsvFile.value) {
-    ElMessage.warning(t('message.noFileSelected'))
-    return
+function handleDialogConfirm(newEntry: Entry) {
+  if (editingEntry.value) {
+    const index = props.entryList.entries.indexOf(editingEntry.value)
+    if (index > -1) {
+      props.entryList.entries[index] = newEntry
+    }
+  } else {
+    props.entryList.entries.push(newEntry)
   }
+  emit('update:entryList', props.entryList)
+  editingEntry.value = null
+}
 
-  csvUploading.value = true
-
-  try {
-    const content = await selectedCsvFile.value.text()
-    const result = parseCSV(content)
-
-    if (result.errors.length > 0) {
-      ElMessage.error(`${t('message.parseFailed')}: ${result.errors.join(', ')}`)
-      return
+function handleCsvFileChange(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (file) {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const content = e.target?.result as string
+      parseAndImportCsv(content)
     }
-
-    if (result.warnings.length > 0) {
-      ElMessage.warning(result.warnings.join('\n'))
-    }
-
-    if (mergeWithExisting.value) {
-      const merged = mergeEntryLists(props.entryList, result.entryList)
-      props.entryList.entries = merged.entries
-      props.entryList.forceEntryList = merged.forceEntryList
-    } else {
-      const savedForce = props.entryList.forceEntryList ?? 0
-      props.entryList.entries = result.entryList.entries
-      props.entryList.forceEntryList = savedForce
-    }
-
-    showCsvUpload.value = false
-    selectedCsvFile.value = null
-    if (uploadRef.value) {
-      uploadRef.value.clearFiles()
-    }
-
-    ElMessage.success(`${t('common.importSuccess')}: ${result.entryList.entries.length}`)
-  } catch (error) {
-    ElMessage.error(t('message.fileReadFailed') + ': ' + (error as Error).message)
-  } finally {
-    csvUploading.value = false
+    reader.readAsText(file)
   }
 }
 
-function escapeCsvField(value: string): string {
-  if (value.includes(',') || value.includes('"') || value.includes('\n')) {
-    return `"${value.replace(/"/g, '""')}"`
-  }
-  return value
-}
-
-function buildCsvContent(): string {
-  const header = 'playerID,teamName,raceNumber,defaultGridPosition,firstName,lastName,shortName,overrideDriverInfo,isServerAdmin,nationality,driverCategory,forcedCarModel,ballastKg,restrictor'
-  const rows: string[] = [header]
-
-  for (const entry of props.entryList.entries) {
-    for (const driver of entry.drivers) {
-      const row = [
-        escapeCsvField(driver.playerID || ''),
-        escapeCsvField(entry.teamName || ''),
-        String(entry.raceNumber),
-        String(entry.defaultGridPosition || 0),
-        escapeCsvField(driver.firstName || ''),
-        escapeCsvField(driver.lastName || ''),
-        escapeCsvField(driver.shortName || ''),
-        String(entry.overrideDriverInfo ?? 1),
-        String(entry.isServerAdmin || 0),
-        String(driver.nationality || 0),
-        String(driver.driverCategory || 0),
-        String(entry.forcedCarModel ?? -1),
-        String(entry.ballastKg || 0),
-        String(entry.restrictor || 0)
-      ].join(',')
-      rows.push(row)
-    }
-  }
-
-  return '\uFEFF' + rows.join('\n')
-}
-
-async function handleExportCsv() {
-  if (props.entryList.entries.length === 0) {
-    ElMessage.warning(t('message.noDataToExport'))
-    return
-  }
-
-  const content = buildCsvContent()
-  const blob = new Blob([content], { type: 'text/csv;charset=utf-8' })
-
-  if ('showSaveFilePicker' in window) {
-    try {
-      const handle = await (window as any).showSaveFilePicker({
-        suggestedName: 'entrylist.csv',
-        types: [{
-          description: 'CSV ' + t('common.file'),
-          accept: { 'text/csv': ['.csv'] }
-        }]
-      })
-      const writable = await handle.createWritable()
-      await writable.write(blob)
-      await writable.close()
-      ElMessage.success(t('common.exportSuccess'))
-    } catch (e: any) {
-      if (e.name !== 'AbortError') {
-        ElMessage.error(t('message.exportFailed') + ': ' + e.message)
+function handleJsonFileChange(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (file) {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string
+        const imported = JSON.parse(content) as EntryList
+        
+        if (mergeWithExisting.value) {
+          props.entryList.entries.push(...imported.entries)
+        } else {
+          props.entryList.entries = imported.entries
+        }
+        
+        if (imported.forceEntryList !== undefined) {
+          props.entryList.forceEntryList = imported.forceEntryList
+        }
+        
+        emit('update:entryList', props.entryList)
+        showImportMenu.value = false
+      } catch (error) {
+        console.error('JSON导入错误:', error)
+        alert(t('common.jsonImportFailed'))
       }
     }
-  } else {
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'entrylist.csv'
-    a.click()
-    URL.revokeObjectURL(url)
-    ElMessage.success(t('common.exportSuccess'))
+    reader.readAsText(file)
   }
 }
 
-function handleDialogConfirm(entry: Entry) {
-  if (editingEntry.value) {
-    // 编辑模式：替换原有车队
-    const index = props.entryList.entries.findIndex(e => e === editingEntry.value)
-    if (index !== -1) {
-      props.entryList.entries[index] = entry
-      ElMessage.success(t('common.updateSuccess'))
-    }
-    editingEntry.value = null
-  } else {
-    // 添加模式：检查是否已存在
-    const existingIndex = props.entryList.entries.findIndex(
-      e => e.teamName === entry.teamName
-    )
+function handleExportJson() {
+  const jsonContent = JSON.stringify(props.entryList, null, 2)
+  const blob = new Blob([jsonContent], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = 'entrylist.json'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
 
-    if (existingIndex >= 0) {
-      ElMessageBox.confirm(
-        `${t('common.teamExists')}: "${entry.teamName}" - ${t('common.mergeDrivers')}?`,
-        t('common.teamExists'),
-        {
-          confirmButtonText: t('common.merge'),
-          cancelButtonText: t('common.replace'),
-          distinguishCancelAndClose: true,
-          type: 'warning'
-        }
-      ).then(() => {
-        entry.drivers.forEach(driver => {
-          const exists = props.entryList.entries[existingIndex].drivers.some(
-            d =>
-              steamIdsEqual(d.playerID, driver.playerID) ||
-              (d.firstName === driver.firstName && d.lastName === driver.lastName)
-          )
-          if (!exists) {
-            props.entryList.entries[existingIndex].drivers.push(driver)
-          }
-        })
-        ElMessage.success(t('common.driversMerged'))
-      }).catch((action) => {
-        if (action === 'cancel') {
-          props.entryList.entries[existingIndex] = entry
-          ElMessage.success(t('common.teamReplaced'))
-        }
-      })
-    } else {
-      props.entryList.entries.push(entry)
-      ElMessage.success(t('common.addSuccess'))
-    }
+function handleExportCsv() {
+  const headers = [
+    'playerID', 'teamName', 'raceNumber', 'defaultGridPosition',
+    'firstName', 'lastName', 'shortName', 'overrideDriverInfo',
+    'isServerAdmin', 'nationality', 'driverCategory', 'forcedCarModel',
+    'ballastKg', 'restrictor'
+  ]
+  
+  const rows: string[][] = []
+  
+  props.entryList.entries.forEach(entry => {
+    entry.drivers.forEach(driver => {
+      rows.push([
+        driver.playerID || '',
+        entry.teamName || '',
+        entry.raceNumber.toString() || '',
+        entry.defaultGridPosition.toString() || '',
+        driver.firstName || '',
+        driver.lastName || '',
+        driver.shortName || '',
+        entry.overrideDriverInfo?.toString() || '1',
+        entry.isServerAdmin?.toString() || '0',
+        driver.nationality?.toString() || '0',
+        driver.driverCategory?.toString() || '0',
+        entry.forcedCarModel?.toString() || '-1',
+        entry.ballastKg?.toString() || '0',
+        entry.restrictor?.toString() || '100'
+      ])
+    })
+  })
+  
+  const csvContent = [headers.join(','), ...rows.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n')
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = 'entrylist.csv'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+
+function parseAndImportCsv(content: string) {
+  const result = parseCSV(content)
+  
+  if (result.errors.length > 0) {
+    console.error('CSV导入错误:', result.errors)
+    alert('CSV导入失败: ' + result.errors.join('\n'))
+    return
   }
+
+  if (result.warnings.length > 0) {
+    console.warn('CSV导入警告:', result.warnings)
+  }
+
+  if (mergeWithExisting.value) {
+    props.entryList.entries.push(...result.entryList.entries)
+  } else {
+    props.entryList.entries = result.entryList.entries
+  }
+
+  emit('update:entryList', props.entryList)
+  showCsvUpload.value = false
 }
 </script>
 
 <style scoped>
-.entry-list-form {
-  padding: 20px;
-  max-width: 1400px;
-  margin: 0 auto;
+.win11-toolbar {
+  @apply flex items-center justify-between;
+  @apply bg-win11-surface rounded-lg p-4;
 }
 
-.toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-  gap: 12px;
+.win11-toolbar-left {
+  @apply flex items-center gap-3;
 }
 
-.toolbar-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+.win11-toolbar-right {
+  @apply flex items-center gap-3;
 }
 
-.toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+.win11-form-field {
+  @apply flex flex-col gap-2;
 }
 
-.search-input {
-  width: 220px;
+.win11-form-label {
+  @apply text-sm font-medium text-win11-text;
 }
 
-.sort-select {
-  width: 130px;
+.win11-toggle-row {
+  @apply flex items-center justify-between p-4;
+  @apply bg-win11-surface rounded-lg;
 }
 
-.entrylist-global-bar {
-  margin-bottom: 14px;
-  padding: 10px 14px;
-  background: var(--el-fill-color-blank);
-  border-radius: 8px;
-  border: 1px solid var(--el-border-color-lighter);
+.win11-toggle-info {
+  @apply flex flex-col gap-1;
 }
 
-.force-entry-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  cursor: help;
+.win11-toggle-label {
+  @apply text-sm text-win11-text;
 }
 
-.force-entry-label {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--el-text-color-primary);
+.win11-toggle-desc {
+  @apply text-xs text-win11-text-secondary;
 }
 
-.stats-bar {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
+.win11-stat-tag {
+  @apply px-3 py-1 rounded-full text-sm;
+  @apply bg-win11-surface text-win11-text;
 }
 
 .entries-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-  gap: 16px;
+  @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4;
 }
 
-.entry-card {
-  transition: all 0.3s ease;
+.win11-entry-card {
+  @apply p-4 rounded-lg;
+  @apply bg-win11-surface border border-win11-border;
+  @apply transition-all duration-200;
 }
 
-.entry-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+.win11-entry-card:hover {
+  @apply border-win11-accent/50;
 }
 
-.entry-card.is-selected {
-  border-color: #409EFF;
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+.win11-entry-card.is-selected {
+  @apply border-win11-accent bg-win11-accent/5;
 }
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1;
-}
-
-.race-number {
-  font-size: 18px;
-  font-weight: bold;
-  color: #409EFF;
-  background: linear-gradient(135deg, #409EFF 0%, #6BB6FF 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  min-width: 45px;
+.entry-card-header {
+  @apply flex items-center gap-3 mb-3;
 }
 
 .team-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.team-name-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
+  @apply flex-1 flex flex-col gap-1;
 }
 
 .team-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  @apply font-semibold text-win11-text;
+  @apply cursor-pointer hover:text-win11-accent;
 }
 
-.team-name:hover {
-  color: var(--el-color-primary);
+.team-name-input {
+  @apply h-8 text-sm;
 }
 
-.edit-icon {
-  font-size: 12px;
-  opacity: 0;
-  transition: opacity 0.2s;
-  flex-shrink: 0;
-}
-
-.team-name:hover .edit-icon {
-  opacity: 1;
+.race-number {
+  @apply font-mono font-bold text-win11-accent;
 }
 
 .car-model-badge {
-  font-size: 11px;
-  color: var(--el-text-color-secondary);
-  background: var(--el-fill-color);
-  padding: 1px 8px;
-  border-radius: 10px;
-  white-space: nowrap;
-  flex-shrink: 0;
+  @apply text-xs px-2 py-0.5 rounded;
+  @apply bg-win11-control-bg text-win11-text-secondary;
 }
 
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.entry-meta-row {
-  display: flex;
-  gap: 12px;
-  padding-bottom: 10px;
-  margin-bottom: 8px;
-  border-bottom: 1px dashed var(--el-border-color-lighter);
-}
-
-.meta-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  cursor: default;
-}
-
-.meta-label {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-  white-space: nowrap;
-}
-
-.meta-item {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-.drivers-section {
-  padding-top: 0;
+.entry-actions {
+  @apply flex items-center gap-1;
 }
 
 .drivers-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  @apply space-y-2;
 }
 
-.driver-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  background: var(--el-fill-color-lighter);
-  border-radius: 6px;
-  border-left: 3px solid transparent;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-}
-
-.driver-item:hover {
-  background: var(--el-color-primary-light-9);
-}
-
-.driver-item:hover .delete-driver-btn {
-  opacity: 1;
-}
-
-.driver-cat-0 { border-left-color: #cd7f32; }
-.driver-cat-1 { border-left-color: #a8a8a8; }
-.driver-cat-2 { border-left-color: #f0c800; }
-.driver-cat-3 { border-left-color: #b8d4e3; }
-.driver-cat-4 { border-left-color: #e05555; }
-
-.driver-item.driver-steamid-invalid {
-  background: color-mix(in srgb, var(--el-color-danger) 14%, var(--el-fill-color-lighter));
-  box-shadow: inset 0 0 0 1px var(--el-color-danger);
-}
-
-.driver-item.driver-steamid-invalid:hover {
-  background: color-mix(in srgb, var(--el-color-danger) 18%, var(--el-color-primary-light-9));
-}
-
-.driver-id--invalid {
-  color: var(--el-color-danger);
-  font-weight: 600;
-}
-
-.driver-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.driver-name-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: nowrap;
-  min-width: 0;
+.win11-driver-item {
+  @apply flex items-center gap-2 p-2 rounded;
+  @apply bg-win11-control-bg text-win11-text;
+  @apply cursor-pointer hover:bg-win11-control-hover-bg;
 }
 
 .category-pill {
-  font-size: 10px;
-  font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 3px;
-  color: #fff;
-  white-space: nowrap;
-  flex-shrink: 0;
-  line-height: 1.6;
+  @apply text-xs px-2 py-0.5 rounded-full font-semibold;
 }
 
-.cat-0 { background: #cd7f32; }
-.cat-1 { background: #a8a8a8; }
-.cat-2 { background: #d4a800; }
-.cat-3 { background: #8bafc4; }
-.cat-4 { background: #e05555; }
+.category-pill.cat-0 { @apply bg-yellow-500/20 text-yellow-400; }
+.category-pill.cat-1 { @apply bg-yellow-400/20 text-yellow-300; }
+.category-pill.cat-2 { @apply bg-gray-400/20 text-gray-300; }
+.category-pill.cat-3 { @apply bg-amber-600/20 text-amber-400; }
 
 .driver-name {
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-  font-size: 13px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.short-name {
-  color: var(--el-text-color-placeholder);
-  font-size: 11px;
-  flex-shrink: 0;
-}
-
-.driver-nationality {
-  font-size: 11px;
-  color: var(--el-text-color-secondary);
-  margin-left: auto;
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
-.nationality-option {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35em;
-}
-
-.nationality-option__flag {
-  flex-shrink: 0;
-  border-radius: 2px;
+  @apply flex-1 text-sm;
 }
 
 .driver-id {
-  font-size: 11px;
-  font-family: 'Consolas', 'Monaco', monospace;
-  color: var(--el-text-color-placeholder);
-  margin-top: 2px;
-  padding-left: 1px;
+  @apply text-xs font-mono text-win11-text-secondary;
 }
 
-.form-item-steamid-invalid :deep(.el-input__wrapper) {
-  box-shadow: 0 0 0 1px var(--el-color-danger) inset;
+.win11-add-driver-btn {
+  @apply w-full flex items-center justify-center gap-2 p-2 mt-2 rounded;
+  @apply border border-dashed border-win11-border text-win11-text-secondary;
+  @apply hover:border-win11-accent hover:text-win11-accent;
+  @apply transition-all duration-200;
 }
 
-.steamid-field-hint {
-  margin-top: 6px;
-  font-size: 12px;
-  line-height: 1.4;
+.win11-empty-state {
+  @apply flex flex-col items-center justify-center py-12;
+  @apply text-center;
 }
 
-.steamid-field-hint--warning {
-  color: var(--el-color-warning);
+.win11-file-input {
+  @apply w-full p-4 rounded-lg;
+  @apply bg-win11-control-bg border border-win11-border;
+  @apply text-win11-text;
 }
 
-.delete-driver-btn {
-  opacity: 0;
-  transition: opacity 0.2s;
-  flex-shrink: 0;
+.win11-checkbox {
+  @apply w-4 h-4 rounded border-2 border-win11-border;
+  @apply checked:bg-win11-accent checked:border-win11-accent;
+  @apply focus:ring-2 focus:ring-win11-accent/50;
 }
 
-.add-driver-btn {
-  margin-top: 8px;
-  width: 100%;
+.win11-icon-btn {
+  @apply w-8 h-8 rounded-md flex items-center justify-center;
+  @apply text-win11-icon hover:text-win11-text hover:bg-win11-surface-hover;
+  @apply transition-all duration-200;
 }
 
-.empty-state {
-  padding: 60px 20px;
+.win11-icon-btn.danger {
+  @apply text-win11-icon hover:text-red-500 hover:bg-red-500/10;
 }
 
-:deep(.el-empty__description) {
-  margin-top: 16px;
-  color: #909399;
-}
-
-/* 响应式布局 */
-@media (max-width: 768px) {
-  .toolbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .toolbar-left,
-  .toolbar-right {
-    justify-content: center;
-  }
-
-  .search-input {
-    width: 100%;
-  }
-
-  .entries-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .card-header {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .header-left {
-    width: 100%;
-  }
-}
+:root.light .category-pill.cat-0 { @apply bg-yellow-100 text-yellow-800; }
+:root.light .category-pill.cat-1 { @apply bg-yellow-50 text-yellow-700; }
+:root.light .category-pill.cat-2 { @apply bg-gray-100 text-gray-600; }
+:root.light .category-pill.cat-3 { @apply bg-amber-100 text-amber-800; }
 </style>
