@@ -682,15 +682,24 @@ pub fn start_acc_server(
             concat!(
                 "$ErrorActionPreference = 'Stop'; ",
                 "$existing = Get-Process accServer -ErrorAction SilentlyContinue; ",
-                "if ($existing) {{ throw 'ACC服务器已在运行中 (PID: ' + ($existing.Id -join ',') + ')' }}; ",
+                "if ($existing) {{ Write-Output ('ALREADY_RUNNING:' + ($existing.Id -join ',')); exit 0 }}; ",
                 "$taskName = 'ACCServer_' + (Get-Random); ",
                 "$action = New-ScheduledTaskAction -Execute '{}\\accServer.exe' -WorkingDirectory '{}'; ",
-                "Register-ScheduledTask -TaskName $taskName -Action $action -Force | Out-Null; ",
+                "$principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -RunLevel Highest; ",
+                "$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries; ",
+                "Register-ScheduledTask -TaskName $taskName -Action $action -Principal $principal -Settings $settings -Force | Out-Null; ",
                 "Start-ScheduledTask -TaskName $taskName; ",
-                "Start-Sleep -Seconds 3; ",
+                "$waited = 0; ",
+                "do {{ ",
+                "  Start-Sleep -Milliseconds 500; ",
+                "  $waited += 500; ",
+                "  $proc = Get-Process accServer -ErrorAction SilentlyContinue | Select-Object -First 1; ",
+                "}} while (-not $proc -and $waited -lt 8000); ",
+                "$taskInfo = Get-ScheduledTaskInfo -TaskName $taskName; ",
+                "$taskResult = $taskInfo.LastTaskResult; ",
                 "Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue; ",
                 "$proc = Get-Process accServer -ErrorAction SilentlyContinue | Select-Object -First 1; ",
-                "if ($proc) {{ Write-Output $proc.Id }} else {{ throw 'ACC服务器启动失败：进程未运行，请检查服务器配置文件。' }}"
+                "if ($proc) {{ Write-Output ('STARTED:' + $proc.Id) }} else {{ throw ('ACC服务器启动失败：进程未运行。TaskResult=' + $taskResult) }}"
             ),
             normalized_path, normalized_path
         );
@@ -725,6 +734,14 @@ pub fn start_acc_server(
                 msg.push_str(&format!("\nstdout: {}", out));
             }
             return Err(msg);
+        }
+
+        if let Some(pids) = out.strip_prefix("ALREADY_RUNNING:") {
+            return Ok(format!("ACC服务器已在运行中 (PID: {})", pids));
+        }
+
+        if let Some(pid) = out.strip_prefix("STARTED:") {
+            return Ok(format!("ACC服务器启动成功 (PID: {})", pid));
         }
 
         Ok(format!("ACC服务器启动成功 (PID: {})", out))

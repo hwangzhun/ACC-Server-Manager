@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use acc_pitwall::*;
+use tauri::WindowEvent;
 
 fn main() {
     run();
@@ -13,6 +14,15 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                if get_ssh_status().connected {
+                    api.prevent_close();
+                    let _ = disconnect_ssh();
+                    let _ = window.close();
+                }
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             connect,
             disconnect,
@@ -40,8 +50,7 @@ pub fn run() {
             delete_config_folder,
             download_results_filtered_cmd,
             pull_server_config_cmd,
-            get_app_exe_dir,
-            get_app_resource_dir,
+            acc_server_zip_in_cwd,
             get_lfm_bop_cached,
             get_lfm_bop_cache_status,
             clear_lfm_bop_cache,

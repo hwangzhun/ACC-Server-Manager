@@ -5,3 +5,4 @@ mod preset_manager;
 mod server_manager;
 
 pub use commands::*;
+pub use ssh_utils::{disconnect_ssh, get_ssh_status};

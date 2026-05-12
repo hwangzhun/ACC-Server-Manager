@@ -2,7 +2,6 @@ use crate::ssh_utils::{SshConfig, DeployOptions, test_ssh_connection, deploy_con
 use crate::preset_manager::{get_presets, save_preset, load_preset, update_preset, delete_preset, rename_preset};
 use crate::server_manager::{get_servers, save_server, load_server, delete_server, rename_server};
 use serde_json::Value;
-use tauri::Manager;
 
 #[tauri::command]
 pub async fn connect(config: SshConfig) -> Result<ConnectResult, String> {
@@ -196,24 +195,13 @@ pub async fn get_app_data_dir() -> Result<String, String> {
     Ok(app_data.to_string_lossy().to_string())
 }
 
-/// 获取可执行文件所在目录（软件根目录）
+/// 当前工作目录下的 `acc-server.zip`（存在则返回绝对路径）
 #[tauri::command]
-pub async fn get_app_exe_dir() -> Result<String, String> {
-    let exe_path = std::env::current_exe()
-        .map_err(|e| format!("获取可执行文件路径失败: {}", e))?;
-    let exe_dir = exe_path.parent()
-        .ok_or_else(|| "无法获取可执行文件目录".to_string())?;
-    Ok(exe_dir.to_string_lossy().to_string())
-}
-
-/// 获取应用资源目录（安装包内 resources）
-#[tauri::command]
-pub async fn get_app_resource_dir(app: tauri::AppHandle) -> Result<String, String> {
-    let resource_dir = app
-        .path()
-        .resource_dir()
-        .map_err(|e| format!("获取应用资源目录失败: {}", e))?;
-    Ok(resource_dir.to_string_lossy().to_string())
+pub fn acc_server_zip_in_cwd() -> Option<String> {
+    let cwd = std::env::current_dir().ok()?;
+    let path = cwd.join("acc-server.zip");
+    path.is_file()
+        .then(|| path.to_string_lossy().into_owned())
 }
 
 /// 获取服务器列表
