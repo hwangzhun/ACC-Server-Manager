@@ -126,6 +126,16 @@ A modern configuration tool for **Assetto Corsa Competizione (ACC)** game server
 
 ## 更新日志  / Updatelog
 
+### V2.0.3 - 2026/5/12
+- 部署上传前二次确认弹窗增强。
+- SSH已连接或连接时禁止切换已服务器保存，避免误操作。
+
+---
+
+- Enhanced secondary confirmation dialog for deployment uploads.
+- Switching to a saved server profile is now disabled while an SSH connection is active or being established, to prevent accidental operations.
+
+
 ### V2.0.2 - 2026/5/5
 - 新增卡片/表格双视图切换，支持展开车手列表与健康检查筛选，批量排查异常更高效。
 - 新增 Entrylist JSON 导入（高级）与导出入口，CSV 导入失败提示与成功摘要（队伍数/警告数/异常数）更清晰。
